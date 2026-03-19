@@ -7,22 +7,24 @@
 [![CI](https://github.com/storz-rs/storz-rs/actions/workflows/ci.yml/badge.svg)](https://github.com/storz-rs/storz-rs/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
-Scratching my own itch — I wanted to control my Storz & Bickel devices from the terminal without a phone app. Built on [btleplug](https://github.com/deviceplug/btleplug) for cross-platform BLE.
+A Rust library for controlling Storz & Bickel vaporizers over BLE. Built on [btleplug](https://github.com/deviceplug/btleplug) for cross-platform support. Protocol reverse-engineered from [reactive-volcano-app](https://github.com/firsttris/reactive-volcano-app).
 
 ## Supported Devices
 
-| Device | Status | Notes |
+| Device | Tested | Notes |
 |--------|--------|-------|
-| Volcano Hybrid | ✅ Tested | Full control: temp, heater, pump, activity stream |
-| Venty | ✅ Tested | Temp control, heater, auto init sequence |
-| Veazy | 🔬 Should work | Same protocol as Venty |
-| Crafty+ | 🔬 Should work | Temp control, heater on/off |
+| Venty | ✅ | Temp, heater, auto init sequence |
+| Volcano Hybrid | 🔬 | Temp, heater, pump, activity stream |
+| Veazy | 🔬 | Same protocol as Venty |
+| Crafty+ | 🔬 | Temp, heater on/off |
+
+> Only the Venty has been tested so far. The others should work based on the shared protocol but haven't been verified with real hardware yet. If you have one and want to help test, open an issue.
 
 ## Quick Start
 
 ```rust
 use std::time::Duration;
-use storz_rs::{connect, discover_vaporizers, get_adapter, VaporizerControl};
+use storz_rs::{connect, discover_vaporizers, get_adapter};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -54,14 +56,25 @@ cargo run --example connect_volcano
 cargo run --example monitor_state
 ```
 
-## API Overview
+Each example scans for nearby devices and connects to the first one it finds. `connect_venty` and `connect_volcano` are device-specific, `monitor_state` works with any device.
+
+## API
 
 Full docs at [docs.rs/storz-rs](https://docs.rs/storz-rs).
 
-Key types:
 - `discover_vaporizers()` — BLE scan for S&B devices
-- `connect()` — auto-detect model, connect, init
-- `VaporizerControl` trait — `get/set_temperature`, `heater_on/off`, `pump_on/off`, `subscribe_state`
+- `connect()` — auto-detect model, connect, run init sequence
+- `VaporizerControl` trait — uniform async API across all devices
+
+| Method | Volcano | Venty | Veazy | Crafty |
+|--------|---------|-------|-------|--------|
+| `get_current_temperature` | ✅ | ✅ | ✅ | ✅ |
+| `get/set_target_temperature` | ✅ | ✅ | ✅ | ✅ |
+| `heater_on/off` | ✅ | ✅ | ✅ | ✅ |
+| `pump_on/off` | ✅ | ❌ | ❌ | ❌ |
+| `subscribe_state` | ✅ | ✅ | ✅ | ✅ |
+
+`pump_on/off` returns `UnsupportedOperation` on devices without a pump.
 
 ## Platform Support
 
@@ -69,7 +82,7 @@ Key types:
 |----------|-------------|--------|
 | Linux | BlueZ | ✅ |
 | macOS | CoreBluetooth | ✅ |
-| Windows | WinRT | ✅/⚠️ |
+| Windows | WinRT | ✅ |
 
 Requires a BLE adapter.
 
@@ -78,9 +91,9 @@ Requires a BLE adapter.
 <details>
 <summary>Linux: "No discovery started" / D-Bus error</summary>
 
-BlueZ requires permissions to start BLE scans. The fix depends on your distro:
+BlueZ needs permissions to start BLE scans.
 
-**Arch Linux** (no `bluetooth` group) — create a polkit rule:
+**Arch Linux** — no `bluetooth` group, use polkit:
 
 ```bash
 sudo tee /etc/polkit-1/rules.d/50-bluetooth.rules << 'EOF'
@@ -93,13 +106,13 @@ polkit.addRule(function(action, subject) {
 EOF
 ```
 
-**Debian/Ubuntu/Fedora** — add your user to the `bluetooth` group:
+**Debian/Ubuntu/Fedora** — add yourself to the `bluetooth` group:
 
 ```bash
 sudo usermod -aG bluetooth $USER
 ```
 
-Then log out and back in.
+Log out and back in after.
 
 </details>
 
@@ -122,9 +135,11 @@ Fork, branch, PR. Run before submitting:
 cargo fmt && cargo clippy -- -D warnings
 ```
 
+Especially interested in testing on real hardware for Volcano Hybrid, Veazy, and Crafty+.
+
 ## Disclaimer
 
-Not affiliated with Storz & Bickel GmbH. Use at your own risk. This is unofficial reverse-engineered software for personal use.
+Not affiliated with Storz & Bickel GmbH. Use at your own risk. This is unofficial reverse-engineered software.
 
 ## License
 
