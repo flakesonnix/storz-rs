@@ -1,6 +1,6 @@
 use std::time::Duration;
 
-use storz_rs::{connect, discover_vaporizers, get_adapter};
+use storz_rs::{connect, discover_vaporizers, get_adapter, select_peripheral};
 use tracing::info;
 
 #[tokio::main]
@@ -9,13 +9,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let adapter = get_adapter().await?;
     let peripherals = discover_vaporizers(&adapter, Duration::from_secs(10)).await?;
+    let peripheral = select_peripheral(peripherals).await?;
 
-    let volcano = peripherals
-        .into_iter()
-        .next()
-        .expect("No Storz & Bickel device found");
-
-    let device = connect(volcano).await?;
+    let device = connect(peripheral).await?;
     info!("Connected to {}", device.device_model());
 
     let current = device.get_current_temperature().await?;

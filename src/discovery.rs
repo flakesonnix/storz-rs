@@ -78,3 +78,46 @@ pub async fn get_adapter() -> Result<Adapter, StorzError> {
         .next()
         .ok_or(StorzError::DeviceNotFound)
 }
+
+/// Select a single peripheral from a list.
+///
+/// If only one device is found, returns it immediately.
+/// If multiple are found, prints them and prompts for selection via stdin.
+pub async fn select_peripheral(peripherals: Vec<Peripheral>) -> Result<Peripheral, StorzError> {
+    if peripherals.is_empty() {
+        return Err(StorzError::DeviceNotFound);
+    }
+    if peripherals.len() == 1 {
+        return Ok(peripherals.into_iter().next().unwrap());
+    }
+
+    println!("\nMultiple devices found:");
+    let mut names = Vec::new();
+    for (i, p) in peripherals.iter().enumerate() {
+        let name = p
+            .properties()
+            .await
+            .ok()
+            .flatten()
+            .and_then(|props| props.local_name)
+            .unwrap_or_else(|| "Unknown".into());
+        names.push(name.clone());
+        println!("  [{}] {}", i + 1, name);
+    }
+
+    loop {
+        print!("\nSelect device [1-{}]: ", peripherals.len());
+        use std::io::Write;
+        std::io::stdout().flush().ok();
+
+        let mut input = String::new();
+        std::io::stdin().read_line(&mut input).ok();
+        if let Ok(idx) = input.trim().parse::<usize>() {
+            if idx >= 1 && idx <= peripherals.len() {
+                info!("Selected: {}", names[idx - 1]);
+                return Ok(peripherals.into_iter().nth(idx - 1).unwrap());
+            }
+        }
+        println!("Invalid selection. Try again.");
+    }
+}

@@ -12,7 +12,7 @@ pub mod utils;
 pub mod uuids;
 
 pub use device::{DeviceModel, DeviceState};
-pub use discovery::{discover_vaporizers, get_adapter};
+pub use discovery::{discover_vaporizers, get_adapter, select_peripheral};
 pub use error::StorzError;
 pub use protocol::{Crafty, VaporizerControl, Venty, VolcanoHybrid};
 
