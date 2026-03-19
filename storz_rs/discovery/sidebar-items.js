@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":["discover_vaporizers","get_adapter"]};
+window.SIDEBAR_ITEMS = {"fn":["discover_vaporizers","get_adapter","select_peripheral"]};
