@@ -6,7 +6,7 @@ use btleplug::api::{Peripheral as _, WriteType};
 use btleplug::platform::Peripheral;
 use futures::Stream;
 use futures::StreamExt;
-use tokio::sync::{broadcast, Mutex};
+use tokio::sync::{Mutex, broadcast};
 use tokio_stream::wrappers::BroadcastStream;
 use tracing::{debug, warn};
 

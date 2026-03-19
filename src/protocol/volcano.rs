@@ -6,11 +6,11 @@ use btleplug::api::{Characteristic, Peripheral as _, WriteType};
 use btleplug::platform::Peripheral;
 use futures::Stream;
 use futures::StreamExt;
-use tokio::sync::{broadcast, Mutex};
+use tokio::sync::{Mutex, broadcast};
 use tokio_stream::wrappers::BroadcastStream;
 use tracing::{debug, warn};
 
-use crate::device::{volcano_flags, DeviceModel, DeviceState};
+use crate::device::{DeviceModel, DeviceState, volcano_flags};
 use crate::error::StorzError;
 use crate::protocol::VaporizerControl;
 use crate::utils;
