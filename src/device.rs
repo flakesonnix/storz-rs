@@ -28,6 +28,7 @@ pub struct DeviceState {
     pub heater_on: bool,
     pub pump_on: bool,
     pub fan_on: bool,
+    pub setpoint_reached: bool,
     pub raw_activity: Option<u32>,
 }
 

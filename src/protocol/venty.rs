@@ -118,21 +118,20 @@ impl Venty {
 
         match cmd_id {
             0x01 | 0x05 if data.len() >= 15 => {
-                // Bytes 2+3: current temperature (u16 LE, /10)
-                if data.len() >= 4 {
-                    let raw = u16::from_le_bytes([data[2], data[3]]);
-                    state.current_temp = Some((raw as f32) / 10.0);
-                }
-
                 // Bytes 4+5: target temperature (u16 LE, /10)
                 if data.len() >= 6 {
                     let raw = u16::from_le_bytes([data[4], data[5]]);
                     state.target_temp = Some((raw as f32) / 10.0);
                 }
 
-                // Byte 11: heater mode (0=off, >0=on)
+                // Byte 11: heater mode (0=off, 1=normal, 2=boost, 3=superboost)
                 if data.len() >= 12 {
                     state.heater_on = data[11] > 0;
+                }
+
+                // Byte 14, bit 1: setpoint reached
+                if data.len() >= 15 {
+                    state.setpoint_reached = (data[14] & 0x02) != 0;
                 }
 
                 // Venty/Veazy don't have pumps
