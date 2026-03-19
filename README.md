@@ -9,6 +9,8 @@
 
 A Rust library for controlling Storz & Bickel vaporizers over BLE. Built on [btleplug](https://github.com/deviceplug/btleplug) for cross-platform support. Protocol reverse-engineered from [reactive-volcano-app](https://github.com/firsttris/reactive-volcano-app).
 
+![Storz & Bickel devices](docs/devices.png)
+
 ## Supported Devices
 
 | Device | Tested | Notes |
