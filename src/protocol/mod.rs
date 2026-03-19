@@ -1,4 +1,6 @@
 mod crafty;
+#[cfg(test)]
+mod dummy;
 mod venty;
 mod volcano;
 
