@@ -8,7 +8,7 @@ use futures::Stream;
 use futures::StreamExt;
 use tokio::sync::{broadcast, Mutex};
 use tokio_stream::wrappers::BroadcastStream;
-use tracing::debug;
+use tracing::{debug, warn};
 
 use crate::device::{DeviceModel, DeviceState};
 use crate::error::StorzError;
@@ -36,6 +36,7 @@ impl Venty {
         };
 
         device.init().await?;
+        device.spawn_notification_loop();
         Ok(device)
     }
 
@@ -72,24 +73,58 @@ impl Venty {
         Ok(())
     }
 
-    #[allow(dead_code)]
-    pub(crate) fn handle_notification(&self, data: &[u8]) {
+    fn spawn_notification_loop(&self) {
+        let peripheral = self.peripheral.clone();
+        let state = self.state.clone();
+        let state_tx = self.state_tx.clone();
+        let model = self.model;
+
+        tokio::spawn(async move {
+            let mut stream = match peripheral.notifications().await {
+                Ok(s) => s,
+                Err(e) => {
+                    warn!("Venty/Veazy failed to start notification stream: {e}");
+                    return;
+                }
+            };
+
+            while let Some(data) = stream.next().await {
+                debug!(
+                    "Venty/Veazy raw notification uuid={} bytes={:02X?}",
+                    data.uuid, data.value
+                );
+                Self::handle_notification_inner(&state, &state_tx, &data.value);
+            }
+
+            warn!("{model} notification stream ended (disconnect?)");
+        });
+    }
+
+    fn handle_notification_inner(
+        state: &Arc<Mutex<DeviceState>>,
+        state_tx: &broadcast::Sender<DeviceState>,
+        data: &[u8],
+    ) {
         if data.is_empty() {
             return;
         }
 
-        let mut state = match self.state.try_lock() {
+        let mut state = match state.try_lock() {
             Ok(s) => s,
             Err(_) => return,
         };
 
-        // Response ID 0x05 = status/data response
-        // Response ID 0x01 = basic data response
         let cmd_id = data[0];
 
         match cmd_id {
             0x01 | 0x05 if data.len() >= 15 => {
-                // Parse temperature from bytes 4+5 (u16 LE, /10)
+                // Bytes 2+3: current temperature (u16 LE, /10)
+                if data.len() >= 4 {
+                    let raw = u16::from_le_bytes([data[2], data[3]]);
+                    state.current_temp = Some((raw as f32) / 10.0);
+                }
+
+                // Bytes 4+5: target temperature (u16 LE, /10)
                 if data.len() >= 6 {
                     let raw = u16::from_le_bytes([data[4], data[5]]);
                     state.target_temp = Some((raw as f32) / 10.0);
@@ -103,11 +138,11 @@ impl Venty {
                 // Venty/Veazy don't have pumps
                 state.pump_on = false;
 
-                let _ = self.state_tx.send(state.clone());
+                let _ = state_tx.send(state.clone());
             }
             _ => {
                 debug!(
-                    "Venty/Veazy received notification cmd=0x{:02X} len={}",
+                    "Venty/Veazy unhandled notification cmd=0x{:02X} len={}",
                     cmd_id,
                     data.len()
                 );

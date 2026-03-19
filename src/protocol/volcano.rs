@@ -8,7 +8,7 @@ use futures::Stream;
 use futures::StreamExt;
 use tokio::sync::{broadcast, Mutex};
 use tokio_stream::wrappers::BroadcastStream;
-use tracing::debug;
+use tracing::{debug, warn};
 
 use crate::device::{volcano_flags, DeviceModel, DeviceState};
 use crate::error::StorzError;
@@ -33,6 +33,7 @@ impl VolcanoHybrid {
         };
 
         device.init_notifications().await?;
+        device.spawn_notification_loop();
         Ok(device)
     }
 
@@ -68,9 +69,39 @@ impl VolcanoHybrid {
         Ok(())
     }
 
-    #[allow(dead_code)]
-    pub(crate) fn handle_notification(&self, uuid: uuid::Uuid, data: &[u8]) {
-        let mut state = match self.state.try_lock() {
+    fn spawn_notification_loop(&self) {
+        let peripheral = self.peripheral.clone();
+        let state = self.state.clone();
+        let state_tx = self.state_tx.clone();
+
+        tokio::spawn(async move {
+            let mut stream = match peripheral.notifications().await {
+                Ok(s) => s,
+                Err(e) => {
+                    warn!("Volcano Hybrid failed to start notification stream: {e}");
+                    return;
+                }
+            };
+
+            while let Some(data) = stream.next().await {
+                debug!(
+                    "Volcano Hybrid raw notification uuid={} bytes={:02X?}",
+                    data.uuid, data.value
+                );
+                Self::handle_notification_inner(&state, &state_tx, data.uuid, &data.value);
+            }
+
+            warn!("Volcano Hybrid notification stream ended (disconnect?)");
+        });
+    }
+
+    fn handle_notification_inner(
+        state: &Arc<Mutex<DeviceState>>,
+        state_tx: &broadcast::Sender<DeviceState>,
+        uuid: uuid::Uuid,
+        data: &[u8],
+    ) {
+        let mut state = match state.try_lock() {
             Ok(s) => s,
             Err(_) => return,
         };
@@ -81,21 +112,28 @@ impl VolcanoHybrid {
                 state.raw_activity = Some(flags as u32);
                 state.heater_on = (flags & volcano_flags::HEATER_ENABLED) != 0;
                 state.pump_on = (flags & volcano_flags::PUMP_ENABLED) != 0;
-                let _ = self.state_tx.send(state.clone());
+                state.fan_on = (flags & volcano_flags::FAN_ENABLED) != 0;
+                let _ = state_tx.send(state.clone());
             }
             VOLCANO_CURRENT_TEMP => {
                 if let Ok(temp) = utils::raw_to_celsius_u16(data) {
                     state.current_temp = Some(temp);
-                    let _ = self.state_tx.send(state.clone());
+                    let _ = state_tx.send(state.clone());
                 }
             }
             VOLCANO_TARGET_TEMP => {
                 if let Ok(temp) = utils::raw_to_celsius_u32(data) {
                     state.target_temp = Some(temp);
-                    let _ = self.state_tx.send(state.clone());
+                    let _ = state_tx.send(state.clone());
                 }
             }
-            _ => {}
+            _ => {
+                debug!(
+                    "Volcano Hybrid unhandled notification uuid={} len={}",
+                    uuid,
+                    data.len()
+                );
+            }
         }
     }
 }

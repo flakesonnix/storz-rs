@@ -7,7 +7,7 @@ use btleplug::platform::Peripheral;
 use futures::{Stream, StreamExt};
 use tokio::sync::{broadcast, Mutex};
 use tokio_stream::wrappers::BroadcastStream;
-use tracing::debug;
+use tracing::{debug, warn};
 
 use crate::device::{DeviceModel, DeviceState};
 use crate::error::StorzError;
@@ -32,6 +32,7 @@ impl Crafty {
         };
 
         device.init_notifications().await?;
+        device.spawn_notification_loop();
         Ok(device)
     }
 
@@ -50,9 +51,39 @@ impl Crafty {
         Ok(())
     }
 
-    #[allow(dead_code)]
-    pub(crate) fn handle_notification(&self, uuid: uuid::Uuid, data: &[u8]) {
-        let mut state = match self.state.try_lock() {
+    fn spawn_notification_loop(&self) {
+        let peripheral = self.peripheral.clone();
+        let state = self.state.clone();
+        let state_tx = self.state_tx.clone();
+
+        tokio::spawn(async move {
+            let mut stream = match peripheral.notifications().await {
+                Ok(s) => s,
+                Err(e) => {
+                    warn!("Crafty failed to start notification stream: {e}");
+                    return;
+                }
+            };
+
+            while let Some(data) = stream.next().await {
+                debug!(
+                    "Crafty raw notification uuid={} bytes={:02X?}",
+                    data.uuid, data.value
+                );
+                Self::handle_notification_inner(&state, &state_tx, data.uuid, &data.value);
+            }
+
+            warn!("Crafty notification stream ended (disconnect?)");
+        });
+    }
+
+    fn handle_notification_inner(
+        state: &Arc<Mutex<DeviceState>>,
+        state_tx: &broadcast::Sender<DeviceState>,
+        uuid: uuid::Uuid,
+        data: &[u8],
+    ) {
+        let mut state = match state.try_lock() {
             Ok(s) => s,
             Err(_) => return,
         };
@@ -60,8 +91,14 @@ impl Crafty {
         if uuid == CRAFTY_CURRENT_TEMP_CHANGED {
             if let Ok(temp) = utils::raw_to_celsius_u16(data) {
                 state.current_temp = Some(temp);
-                let _ = self.state_tx.send(state.clone());
+                let _ = state_tx.send(state.clone());
             }
+        } else {
+            debug!(
+                "Crafty unhandled notification uuid={} len={}",
+                uuid,
+                data.len()
+            );
         }
     }
 }

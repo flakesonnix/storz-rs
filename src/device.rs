@@ -44,6 +44,7 @@ impl fmt::Display for DeviceState {
 /// Bitmask flags from the Volcano activity characteristic.
 pub mod volcano_flags {
     pub const HEATER_ENABLED: u16 = 0x0020;
+    pub const FAN_ENABLED: u16 = 0x0400;
     pub const AUTO_SHUTDOWN: u16 = 0x0200;
     pub const PUMP_ENABLED: u16 = 0x2000;
 }
