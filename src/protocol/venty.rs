@@ -89,15 +89,68 @@ impl Venty {
             };
 
             while let Some(data) = stream.next().await {
-                debug!(
-                    "Venty/Veazy raw notification uuid={} bytes={:02X?}",
-                    data.uuid, data.value
-                );
+                Self::debug_dump_notification(&data.value);
                 Self::handle_notification_inner(&state, &state_tx, &data.value);
             }
 
             warn!("{model} notification stream ended (disconnect?)");
         });
+    }
+
+    fn debug_dump_notification(data: &[u8]) {
+        if data.is_empty() {
+            debug!("Venty notification: empty");
+            return;
+        }
+        let cmd = data[0];
+        let hex: String = data.iter().map(|b| format!("{b:02X}")).collect::<Vec<_>>().join(" ");
+        debug!("Venty notification: cmd=0x{cmd:02X} len={} [{hex}]", data.len());
+
+        if data.len() >= 2 {
+            debug!("  [0] cmd_id    = 0x{:02X}", data[0]);
+            debug!("  [1] mask      = 0x{:02X} ({:08b})", data[1], data[1]);
+        }
+        if data.len() >= 4 {
+            let raw23 = u16::from_le_bytes([data[2], data[3]]);
+            debug!("  [2:3] bytes   = 0x{:04X} (u16={raw23}, as_temp={:.1}°C — UNUSED)", raw23, raw23 as f32 / 10.0);
+        }
+        if data.len() >= 6 {
+            let raw45 = u16::from_le_bytes([data[4], data[5]]);
+            debug!("  [4:5] target  = 0x{:04X} (u16={raw45}, {:.1}°C)", raw45, raw45 as f32 / 10.0);
+        }
+        if data.len() >= 7 {
+            debug!("  [6]   boost   = {}°C", data[6]);
+        }
+        if data.len() >= 8 {
+            debug!("  [7]   sboost  = {}°C", data[7]);
+        }
+        if data.len() >= 9 {
+            debug!("  [8]   battery = {}%", data[8]);
+        }
+        if data.len() >= 11 {
+            let timer = data[9] as u16 + (data[10] as u16) * 256;
+            debug!("  [9:10] timer  = {timer}s");
+        }
+        if data.len() >= 12 {
+            let mode = match data[11] {
+                0 => "off",
+                1 => "normal",
+                2 => "boost",
+                3 => "superboost",
+                _ => "unknown",
+            };
+            debug!("  [11]  heater  = {mode}");
+        }
+        if data.len() >= 14 {
+            debug!("  [13]  charger = {}", data[13]);
+        }
+        if data.len() >= 15 {
+            let s = data[14];
+            debug!("  [14]  settings= 0x{s:02X} (cel={},setpoint={},vibrate={})", 
+                if s & 1 == 0 { "yes" } else { "no" },
+                if s & 2 != 0 { "yes" } else { "no" },
+                if s & 0x40 != 0 { "yes" } else { "no" });
+        }
     }
 
     fn handle_notification_inner(
