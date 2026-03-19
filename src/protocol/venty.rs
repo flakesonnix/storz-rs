@@ -5,16 +5,16 @@ use async_trait::async_trait;
 use btleplug::api::{Peripheral as _, WriteType};
 use btleplug::platform::Peripheral;
 use futures::Stream;
+use futures::StreamExt;
 use tokio::sync::{broadcast, Mutex};
 use tokio_stream::wrappers::BroadcastStream;
-use futures::StreamExt;
 use tracing::debug;
 
 use crate::device::{DeviceModel, DeviceState};
 use crate::error::StorzError;
 use crate::protocol::VaporizerControl;
-use crate::uuids::*;
 use crate::utils;
+use crate::uuids::*;
 
 /// Venty or Veazy device, both share the same protocol.
 pub struct Venty {
@@ -39,9 +39,7 @@ impl Venty {
         Ok(device)
     }
 
-    async fn control_characteristic(
-        &self,
-    ) -> Result<btleplug::api::Characteristic, StorzError> {
+    async fn control_characteristic(&self) -> Result<btleplug::api::Characteristic, StorzError> {
         self.peripheral
             .characteristics()
             .into_iter()
@@ -107,7 +105,11 @@ impl Venty {
                 let _ = self.state_tx.send(state.clone());
             }
             _ => {
-                debug!("Venty/Veazy received notification cmd=0x{:02X} len={}", cmd_id, data.len());
+                debug!(
+                    "Venty/Veazy received notification cmd=0x{:02X} len={}",
+                    cmd_id,
+                    data.len()
+                );
             }
         }
     }
@@ -149,7 +151,7 @@ impl VaporizerControl for Venty {
     async fn heater_on(&self) -> Result<(), StorzError> {
         let buf = utils::build_venty_command(
             0x01,
-            0x20, // HEATER mask
+            0x20,       // HEATER mask
             &[(11, 1)], // heater mode = 1 (normal)
         );
         self.write_command(&buf).await?;
@@ -160,7 +162,7 @@ impl VaporizerControl for Venty {
     async fn heater_off(&self) -> Result<(), StorzError> {
         let buf = utils::build_venty_command(
             0x01,
-            0x20, // HEATER mask
+            0x20,       // HEATER mask
             &[(11, 0)], // heater mode = 0 (off)
         );
         self.write_command(&buf).await?;
@@ -191,7 +193,9 @@ impl VaporizerControl for Venty {
         &self,
     ) -> Result<Pin<Box<dyn Stream<Item = DeviceState> + Send>>, StorzError> {
         let rx = self.state_tx.subscribe();
-        Ok(Box::pin(BroadcastStream::new(rx).filter_map(|r| async move { r.ok() })))
+        Ok(Box::pin(
+            BroadcastStream::new(rx).filter_map(|r| async move { r.ok() }),
+        ))
     }
 
     fn device_model(&self) -> DeviceModel {

@@ -5,16 +5,16 @@ use async_trait::async_trait;
 use btleplug::api::{Characteristic, Peripheral as _, WriteType};
 use btleplug::platform::Peripheral;
 use futures::Stream;
+use futures::StreamExt;
 use tokio::sync::{broadcast, Mutex};
 use tokio_stream::wrappers::BroadcastStream;
-use futures::StreamExt;
 use tracing::debug;
 
 use crate::device::{volcano_flags, DeviceModel, DeviceState};
 use crate::error::StorzError;
 use crate::protocol::VaporizerControl;
-use crate::uuids::*;
 use crate::utils;
+use crate::uuids::*;
 
 pub struct VolcanoHybrid {
     peripheral: Peripheral,
@@ -158,7 +158,9 @@ impl VaporizerControl for VolcanoHybrid {
         &self,
     ) -> Result<Pin<Box<dyn Stream<Item = DeviceState> + Send>>, StorzError> {
         let rx = self.state_tx.subscribe();
-        Ok(Box::pin(BroadcastStream::new(rx).filter_map(|r| async move { r.ok() })))
+        Ok(Box::pin(
+            BroadcastStream::new(rx).filter_map(|r| async move { r.ok() }),
+        ))
     }
 
     fn device_model(&self) -> DeviceModel {

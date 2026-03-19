@@ -73,5 +73,8 @@ pub async fn discover_vaporizers(
 pub async fn get_adapter() -> Result<Adapter, StorzError> {
     let manager = Manager::new().await?;
     let adapters = manager.adapters().await?;
-    adapters.into_iter().next().ok_or(StorzError::DeviceNotFound)
+    adapters
+        .into_iter()
+        .next()
+        .ok_or(StorzError::DeviceNotFound)
 }

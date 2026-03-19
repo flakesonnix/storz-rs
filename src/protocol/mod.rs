@@ -1,10 +1,10 @@
-mod volcano;
-mod venty;
 mod crafty;
+mod venty;
+mod volcano;
 
-pub use volcano::VolcanoHybrid;
-pub use venty::Venty;
 pub use crafty::Crafty;
+pub use venty::Venty;
+pub use volcano::VolcanoHybrid;
 
 use async_trait::async_trait;
 use futures::Stream;

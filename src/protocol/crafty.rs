@@ -12,8 +12,8 @@ use tracing::debug;
 use crate::device::{DeviceModel, DeviceState};
 use crate::error::StorzError;
 use crate::protocol::VaporizerControl;
-use crate::uuids::*;
 use crate::utils;
+use crate::uuids::*;
 
 pub struct Crafty {
     peripheral: Peripheral,
@@ -133,7 +133,9 @@ impl VaporizerControl for Crafty {
         &self,
     ) -> Result<Pin<Box<dyn Stream<Item = DeviceState> + Send>>, StorzError> {
         let rx = self.state_tx.subscribe();
-        Ok(Box::pin(BroadcastStream::new(rx).filter_map(|r| async move { r.ok() })))
+        Ok(Box::pin(
+            BroadcastStream::new(rx).filter_map(|r| async move { r.ok() }),
+        ))
     }
 
     fn device_model(&self) -> DeviceModel {

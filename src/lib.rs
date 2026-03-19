@@ -86,9 +86,7 @@ pub async fn connect(peripheral: Peripheral) -> Result<Box<dyn VaporizerControl>
 
     let controller: Box<dyn VaporizerControl> = match model {
         DeviceModel::VolcanoHybrid => Box::new(VolcanoHybrid::new(peripheral).await?),
-        DeviceModel::Venty | DeviceModel::Veazy => {
-            Box::new(Venty::new(peripheral, model).await?)
-        }
+        DeviceModel::Venty | DeviceModel::Veazy => Box::new(Venty::new(peripheral, model).await?),
         DeviceModel::Crafty => Box::new(Crafty::new(peripheral).await?),
     };
 
