@@ -86,12 +86,10 @@
 <a href=#86 id=86 data-nosnippet>86</a>
 <a href=#87 id=87 data-nosnippet>87</a>    <span class="kw">let </span>controller: Box&lt;<span class="kw">dyn </span>VaporizerControl&gt; = <span class="kw">match </span>model {
 <a href=#88 id=88 data-nosnippet>88</a>        DeviceModel::VolcanoHybrid =&gt; Box::new(VolcanoHybrid::new(peripheral).<span class="kw">await</span><span class="question-mark">?</span>),
-<a href=#89 id=89 data-nosnippet>89</a>        DeviceModel::Venty | DeviceModel::Veazy =&gt; {
-<a href=#90 id=90 data-nosnippet>90</a>            Box::new(Venty::new(peripheral, model).<span class="kw">await</span><span class="question-mark">?</span>)
-<a href=#91 id=91 data-nosnippet>91</a>        }
-<a href=#92 id=92 data-nosnippet>92</a>        DeviceModel::Crafty =&gt; Box::new(Crafty::new(peripheral).<span class="kw">await</span><span class="question-mark">?</span>),
-<a href=#93 id=93 data-nosnippet>93</a>    };
-<a href=#94 id=94 data-nosnippet>94</a>
-<a href=#95 id=95 data-nosnippet>95</a>    <span class="prelude-val">Ok</span>(controller)
-<a href=#96 id=96 data-nosnippet>96</a>}
+<a href=#89 id=89 data-nosnippet>89</a>        DeviceModel::Venty | DeviceModel::Veazy =&gt; Box::new(Venty::new(peripheral, model).<span class="kw">await</span><span class="question-mark">?</span>),
+<a href=#90 id=90 data-nosnippet>90</a>        DeviceModel::Crafty =&gt; Box::new(Crafty::new(peripheral).<span class="kw">await</span><span class="question-mark">?</span>),
+<a href=#91 id=91 data-nosnippet>91</a>    };
+<a href=#92 id=92 data-nosnippet>92</a>
+<a href=#93 id=93 data-nosnippet>93</a>    <span class="prelude-val">Ok</span>(controller)
+<a href=#94 id=94 data-nosnippet>94</a>}
 </code></pre></div></section></main></body></html>
