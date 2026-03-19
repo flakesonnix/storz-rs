@@ -71,7 +71,48 @@ Key types:
 | macOS | CoreBluetooth | ✅ |
 | Windows | WinRT | ✅/⚠️ |
 
-Requires a BLE adapter. On Linux you may need `bluetoothctl` paired first.
+Requires a BLE adapter.
+
+## Troubleshooting
+
+<details>
+<summary>Linux: "No discovery started" / D-Bus error</summary>
+
+BlueZ requires permissions to start BLE scans. The fix depends on your distro:
+
+**Arch Linux** (no `bluetooth` group) — create a polkit rule:
+
+```bash
+sudo tee /etc/polkit-1/rules.d/50-bluetooth.rules << 'EOF'
+polkit.addRule(function(action, subject) {
+    if (action.id === "org.bluez.Adapter.StartDiscovery" ||
+        action.id === "org.bluez.Adapter.SetDiscoveryFilter") {
+        return polkit.Result.YES;
+    }
+});
+EOF
+```
+
+**Debian/Ubuntu/Fedora** — add your user to the `bluetooth` group:
+
+```bash
+sudo usermod -aG bluetooth $USER
+```
+
+Then log out and back in.
+
+</details>
+
+<details>
+<summary>Linux: Bluetooth adapter not found</summary>
+
+```bash
+rfkill unblock bluetooth
+bluetoothctl power on
+systemctl status bluetooth
+```
+
+</details>
 
 ## Contributing
 
