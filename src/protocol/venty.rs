@@ -72,6 +72,7 @@ impl Venty {
         Ok(())
     }
 
+    #[allow(dead_code)]
     pub(crate) fn handle_notification(&self, data: &[u8]) {
         if data.is_empty() {
             return;

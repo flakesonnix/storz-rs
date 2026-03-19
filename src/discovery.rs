@@ -1,6 +1,6 @@
 use std::time::Duration;
 
-use btleplug::api::{Central, CentralEvent, Manager as _, Peripheral as _, ScanFilter};
+use btleplug::api::{Central, Manager as _, Peripheral as _, ScanFilter};
 use btleplug::platform::{Adapter, Manager, Peripheral};
 use tokio::time;
 use tracing::{debug, info, warn};

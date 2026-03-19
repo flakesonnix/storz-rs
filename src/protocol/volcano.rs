@@ -68,6 +68,7 @@ impl VolcanoHybrid {
         Ok(())
     }
 
+    #[allow(dead_code)]
     pub(crate) fn handle_notification(&self, uuid: uuid::Uuid, data: &[u8]) {
         let mut state = match self.state.try_lock() {
             Ok(s) => s,
@@ -75,14 +76,12 @@ impl VolcanoHybrid {
         };
 
         match uuid {
-            VOLCANO_ACTIVITY => {
-                if data.len() >= 2 {
-                    let flags = u16::from_le_bytes([data[0], data[1]]);
-                    state.raw_activity = Some(flags as u32);
-                    state.heater_on = (flags & volcano_flags::HEATER_ENABLED) != 0;
-                    state.pump_on = (flags & volcano_flags::PUMP_ENABLED) != 0;
-                    let _ = self.state_tx.send(state.clone());
-                }
+            VOLCANO_ACTIVITY if data.len() >= 2 => {
+                let flags = u16::from_le_bytes([data[0], data[1]]);
+                state.raw_activity = Some(flags as u32);
+                state.heater_on = (flags & volcano_flags::HEATER_ENABLED) != 0;
+                state.pump_on = (flags & volcano_flags::PUMP_ENABLED) != 0;
+                let _ = self.state_tx.send(state.clone());
             }
             VOLCANO_CURRENT_TEMP => {
                 if let Ok(temp) = utils::raw_to_celsius_u16(data) {

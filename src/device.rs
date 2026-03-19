@@ -21,7 +21,7 @@ impl fmt::Display for DeviceModel {
 }
 
 /// Current state snapshot of a vaporizer device.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Default)]
 pub struct DeviceState {
     pub current_temp: Option<f32>,
     pub target_temp: Option<f32>,
@@ -29,19 +29,6 @@ pub struct DeviceState {
     pub pump_on: bool,
     pub fan_on: bool,
     pub raw_activity: Option<u32>,
-}
-
-impl Default for DeviceState {
-    fn default() -> Self {
-        Self {
-            current_temp: None,
-            target_temp: None,
-            heater_on: false,
-            pump_on: false,
-            fan_on: false,
-            raw_activity: None,
-        }
-    }
 }
 
 impl fmt::Display for DeviceState {

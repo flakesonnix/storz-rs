@@ -50,20 +50,18 @@ impl Crafty {
         Ok(())
     }
 
+    #[allow(dead_code)]
     pub(crate) fn handle_notification(&self, uuid: uuid::Uuid, data: &[u8]) {
         let mut state = match self.state.try_lock() {
             Ok(s) => s,
             Err(_) => return,
         };
 
-        match uuid {
-            CRAFTY_CURRENT_TEMP_CHANGED => {
-                if let Ok(temp) = utils::raw_to_celsius_u16(data) {
-                    state.current_temp = Some(temp);
-                    let _ = self.state_tx.send(state.clone());
-                }
+        if uuid == CRAFTY_CURRENT_TEMP_CHANGED {
+            if let Ok(temp) = utils::raw_to_celsius_u16(data) {
+                state.current_temp = Some(temp);
+                let _ = self.state_tx.send(state.clone());
             }
-            _ => {}
         }
     }
 }
