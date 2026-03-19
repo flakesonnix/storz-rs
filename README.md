@@ -4,7 +4,7 @@
 
 [![crates.io](https://img.shields.io/crates/v/storz-rs)](https://crates.io/crates/storz-rs)
 [![docs.rs](https://img.shields.io/docsrs/storz-rs)](https://docs.rs/storz-rs)
-[![CI](https://github.com/storz-rs/storz-rs/actions/workflows/ci.yml/badge.svg)](https://github.com/storz-rs/storz-rs/actions/workflows/ci.yml)
+[![CI](https://github.com/flakesonnix/storz-rs/actions/workflows/ci.yml/badge.svg)](https://github.com/flakesonnix/storz-rs/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
 A Rust library for controlling Storz & Bickel vaporizers over BLE. Built on [btleplug](https://github.com/deviceplug/btleplug) for cross-platform support. Protocol reverse-engineered from [reactive-volcano-app](https://github.com/firsttris/reactive-volcano-app).
@@ -15,17 +15,18 @@ A Rust library for controlling Storz & Bickel vaporizers over BLE. Built on [btl
 
 | Device | Tested | Notes |
 |--------|--------|-------|
-| Venty | ✅ | Temp, heater, auto init sequence |
-| Volcano Hybrid | 🔬 | Temp, heater, pump, activity stream |
+| Venty | ✅ | Temp, heater, auto init, live notifications |
+| Volcano Hybrid | ✅ | Temp, heater, pump, fan, activity stream |
 | Veazy | 🔬 | Same protocol as Venty |
-| Crafty+ | 🔬 | Temp, heater on/off |
+| Crafty+ | 🔬 | Temp, heater on/off, notifications |
 
-> Only the Venty has been tested so far. The others should work based on the shared protocol but haven't been verified with real hardware yet. If you have one and want to help test, open an issue.
+> Venty and Volcano Hybrid have been verified with real hardware. Veazy and Crafty+ should work based on the shared protocol but haven't been tested yet. If you have one and want to help test, open an issue.
 
 ## Quick Start
 
 ```rust
 use std::time::Duration;
+use futures::StreamExt;
 use storz_rs::{connect, discover_vaporizers, get_adapter};
 
 #[tokio::main]
@@ -38,7 +39,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     device.set_target_temperature(185.0).await?;
     device.heater_on().await?;
 
-    println!("Current temp: {}°C", device.get_current_temperature().await?);
+    // Stream live state updates from BLE notifications
+    let mut state = device.subscribe_state().await?;
+    while let Some(s) = state.next().await {
+        println!("{s}");
+    }
     Ok(())
 }
 ```
@@ -128,6 +133,16 @@ systemctl status bluetooth
 ```
 
 </details>
+
+## Companion Client
+
+Looking for a ready-to-use terminal app? Check out [fumar](https://github.com/flakesonnix/fumar) — a TUI + CLI client built on storz-rs.
+
+```bash
+cargo install fumar
+fumar           # TUI mode
+fumar --cli status  # CLI mode
+```
 
 ## Contributing
 
