@@ -30,6 +30,7 @@ pub struct DeviceState {
     pub fan_on: bool,
     pub setpoint_reached: bool,
     pub raw_activity: Option<u32>,
+    pub settings: Option<DeviceSettings>,
 }
 
 impl fmt::Display for DeviceState {
@@ -40,6 +41,29 @@ impl fmt::Display for DeviceState {
             self.heater_on, self.pump_on, self.fan_on, self.current_temp, self.target_temp
         )
     }
+}
+
+/// Device settings (Venty/Veazy).
+#[derive(Debug, Clone, PartialEq, Default)]
+pub struct DeviceSettings {
+    /// Temperature unit: true = Celsius, false = Fahrenheit
+    pub is_celsius: bool,
+    /// Setpoint reached flag
+    pub setpoint_reached: bool,
+    /// Boost visualization enabled
+    pub boost_visualization: bool,
+    /// Charge current optimization
+    pub charge_current_optimization: bool,
+    /// Charge voltage limit enabled
+    pub charge_voltage_limit: bool,
+    /// Permanent Bluetooth enabled
+    pub permanent_bluetooth: bool,
+    /// Auto shutdown timer in seconds
+    pub auto_shutdown_seconds: Option<u16>,
+    /// Battery level 0-100
+    pub battery_level: Option<u8>,
+    /// Is charging
+    pub is_charging: bool,
 }
 
 /// Bitmask flags from the Volcano activity characteristic.

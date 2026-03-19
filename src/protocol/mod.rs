@@ -10,7 +10,7 @@ use async_trait::async_trait;
 use futures::Stream;
 use std::pin::Pin;
 
-use crate::device::{DeviceModel, DeviceState};
+use crate::device::{DeviceModel, DeviceSettings, DeviceState};
 use crate::error::StorzError;
 
 /// Trait for controlling a Storz & Bickel vaporizer over BLE.
@@ -44,6 +44,22 @@ pub trait VaporizerControl: Send + Sync {
     async fn subscribe_state(
         &self,
     ) -> Result<Pin<Box<dyn Stream<Item = DeviceState> + Send>>, StorzError>;
+
+    /// Read device settings.
+    async fn get_settings(&self) -> Result<DeviceSettings, StorzError> {
+        Err(StorzError::UnsupportedOperation {
+            device: "unknown".into(),
+            operation: "get_settings".into(),
+        })
+    }
+
+    /// Set temperature unit (true = Celsius, false = Fahrenheit).
+    async fn set_temperature_unit(&self, _celsius: bool) -> Result<(), StorzError> {
+        Err(StorzError::UnsupportedOperation {
+            device: "unknown".into(),
+            operation: "set_temperature_unit".into(),
+        })
+    }
 
     /// Return the device model.
     fn device_model(&self) -> DeviceModel;

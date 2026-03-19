@@ -103,8 +103,15 @@ impl Venty {
             return;
         }
         let cmd = data[0];
-        let hex: String = data.iter().map(|b| format!("{b:02X}")).collect::<Vec<_>>().join(" ");
-        debug!("Venty notification: cmd=0x{cmd:02X} len={} [{hex}]", data.len());
+        let hex: String = data
+            .iter()
+            .map(|b| format!("{b:02X}"))
+            .collect::<Vec<_>>()
+            .join(" ");
+        debug!(
+            "Venty notification: cmd=0x{cmd:02X} len={} [{hex}]",
+            data.len()
+        );
 
         if data.len() >= 2 {
             debug!("  [0] cmd_id    = 0x{:02X}", data[0]);
@@ -112,11 +119,19 @@ impl Venty {
         }
         if data.len() >= 4 {
             let raw23 = u16::from_le_bytes([data[2], data[3]]);
-            debug!("  [2:3] bytes   = 0x{:04X} (u16={raw23}, as_temp={:.1}°C — UNUSED)", raw23, raw23 as f32 / 10.0);
+            debug!(
+                "  [2:3] bytes   = 0x{:04X} (u16={raw23}, as_temp={:.1}°C — UNUSED)",
+                raw23,
+                raw23 as f32 / 10.0
+            );
         }
         if data.len() >= 6 {
             let raw45 = u16::from_le_bytes([data[4], data[5]]);
-            debug!("  [4:5] target  = 0x{:04X} (u16={raw45}, {:.1}°C)", raw45, raw45 as f32 / 10.0);
+            debug!(
+                "  [4:5] target  = 0x{:04X} (u16={raw45}, {:.1}°C)",
+                raw45,
+                raw45 as f32 / 10.0
+            );
         }
         if data.len() >= 7 {
             debug!("  [6]   boost   = {}°C", data[6]);
@@ -146,10 +161,12 @@ impl Venty {
         }
         if data.len() >= 15 {
             let s = data[14];
-            debug!("  [14]  settings= 0x{s:02X} (cel={},setpoint={},vibrate={})", 
+            debug!(
+                "  [14]  settings= 0x{s:02X} (cel={},setpoint={},vibrate={})",
                 if s & 1 == 0 { "yes" } else { "no" },
                 if s & 2 != 0 { "yes" } else { "no" },
-                if s & 0x40 != 0 { "yes" } else { "no" });
+                if s & 0x40 != 0 { "yes" } else { "no" }
+            );
         }
     }
 
@@ -182,10 +199,42 @@ impl Venty {
                     state.heater_on = data[11] > 0;
                 }
 
-                // Byte 14, bit 1: setpoint reached
-                if data.len() >= 15 {
-                    state.setpoint_reached = (data[14] & 0x02) != 0;
+                // Parse settings from notification
+                let mut settings = state.settings.take().unwrap_or_default();
+
+                // Byte 8: battery level
+                if data.len() >= 9 {
+                    settings.battery_level = Some(data[8]);
                 }
+
+                // Bytes 9+10: auto shutdown timer
+                if data.len() >= 11 {
+                    let timer = data[9] as u16 + (data[10] as u16) * 256;
+                    settings.auto_shutdown_seconds = Some(timer);
+                }
+
+                // Byte 13: charger connected
+                if data.len() >= 14 {
+                    settings.is_charging = data[13] > 0;
+                }
+
+                // Byte 14: settings flags
+                if data.len() >= 15 {
+                    let s = data[14];
+                    settings.is_celsius = (s & 0x01) == 0;
+                    settings.setpoint_reached = (s & 0x02) != 0;
+                    settings.charge_current_optimization = (s & 0x08) != 0;
+                    settings.charge_voltage_limit = (s & 0x20) != 0;
+                    settings.boost_visualization = (s & 0x40) != 0;
+                    state.setpoint_reached = settings.setpoint_reached;
+                }
+
+                // Byte 16: permanent bluetooth
+                if data.len() >= 17 {
+                    settings.permanent_bluetooth = (data[16] & 0x01) != 0;
+                }
+
+                state.settings = Some(settings);
 
                 // Venty/Veazy don't have pumps
                 state.pump_on = false;
