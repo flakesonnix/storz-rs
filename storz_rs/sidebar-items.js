@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["connect","detect_model"],"mod":["device","discovery","error","protocol","utils","uuids"]};

@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"constant":["AUTO_SHUTDOWN","HEATER_ENABLED","PUMP_ENABLED"]};
