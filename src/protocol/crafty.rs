@@ -212,6 +212,18 @@ impl VaporizerControl for Crafty {
         let hours_of_heating = self.read_u16(CRAFTY_USE_HOURS).await.ok();
         let minutes_of_heating = self.read_u16(CRAFTY_USE_MINUTES).await.ok();
 
+        // Read system status and battery status (may not be available on old Crafty)
+        if let Ok(ch) = self.characteristic(CRAFTY_SYSTEM_STATUS).await {
+            if let Ok(data) = self.peripheral.read(&ch).await {
+                debug!("Crafty system status: {:02X?}", data);
+            }
+        }
+        if let Ok(ch) = self.characteristic(CRAFTY_AKKU_STATUS).await {
+            if let Ok(data) = self.peripheral.read(&ch).await {
+                debug!("Crafty akku status: {:02X?}", data);
+            }
+        }
+
         Ok(DeviceInfo {
             firmware_version,
             firmware_ble_version,

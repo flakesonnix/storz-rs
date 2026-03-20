@@ -78,6 +78,20 @@ impl VolcanoHybrid {
         self.peripheral.subscribe(&ch).await?;
         debug!("Subscribed to Volcano target temp notifications");
 
+        // Subscribe to display characteristic for isCelsius and displayOnCooling flags
+        if let Ok(ch) = self.characteristic(VOLCANO_DISPLAY).await {
+            if self.peripheral.subscribe(&ch).await.is_ok() {
+                debug!("Subscribed to Volcano display notifications");
+            }
+        }
+
+        // Subscribe to current auto-off countdown value
+        if let Ok(ch) = self.characteristic(VOLCANO_CURRENT_AUTO_OFF).await {
+            if self.peripheral.subscribe(&ch).await.is_ok() {
+                debug!("Subscribed to Volcano current auto-off notifications");
+            }
+        }
+
         Ok(())
     }
 
@@ -138,6 +152,26 @@ impl VolcanoHybrid {
                     state.target_temp = Some(temp);
                     let _ = state_tx.send(state.clone());
                 }
+            }
+            VOLCANO_DISPLAY if data.len() >= 2 => {
+                let flags = u16::from_le_bytes([data[0], data[1]]);
+                let mut settings = state.settings.take().unwrap_or_default();
+                // FAHRENHEIT_ENA (0x0200): if NOT set, celsius
+                settings.is_celsius = (flags & volcano_flags::FAHRENHEIT_ENA) == 0;
+                state.settings = Some(settings);
+                debug!(
+                    "Volcano display flags: 0x{flags:04X} (celsius={})",
+                    (flags & volcano_flags::FAHRENHEIT_ENA) == 0
+                );
+                let _ = state_tx.send(state.clone());
+            }
+            VOLCANO_CURRENT_AUTO_OFF if data.len() >= 2 => {
+                let value = u16::from_le_bytes([data[0], data[1]]);
+                let mut settings = state.settings.take().unwrap_or_default();
+                settings.auto_shutdown_seconds = Some(value);
+                state.settings = Some(settings);
+                debug!("Volcano current auto-off: {value}s");
+                let _ = state_tx.send(state.clone());
             }
             _ => {
                 debug!(
