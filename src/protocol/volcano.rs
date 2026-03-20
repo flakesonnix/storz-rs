@@ -253,6 +253,16 @@ impl VaporizerControl for VolcanoHybrid {
         })
     }
 
+    async fn set_shutoff_time(&self, seconds: u16) -> Result<(), StorzError> {
+        let ch = self.characteristic(VOLCANO_SHUTOFF_TIME).await?;
+        let raw = seconds.to_le_bytes();
+        self.peripheral
+            .write(&ch, &raw, WriteType::WithoutResponse)
+            .await?;
+        debug!("Volcano shutoff time set to {seconds}s");
+        Ok(())
+    }
+
     fn device_model(&self) -> DeviceModel {
         DeviceModel::VolcanoHybrid
     }

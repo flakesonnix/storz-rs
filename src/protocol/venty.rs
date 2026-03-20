@@ -21,6 +21,7 @@ pub struct Venty {
     peripheral: Peripheral,
     model: DeviceModel,
     state: Arc<Mutex<DeviceState>>,
+    device_info: Arc<Mutex<DeviceInfo>>,
     state_tx: broadcast::Sender<DeviceState>,
 }
 
@@ -32,6 +33,7 @@ impl Venty {
             peripheral,
             model,
             state: Arc::new(Mutex::new(DeviceState::default())),
+            device_info: Arc::new(Mutex::new(DeviceInfo::default())),
             state_tx,
         };
 
@@ -76,6 +78,7 @@ impl Venty {
     fn spawn_notification_loop(&self) {
         let peripheral = self.peripheral.clone();
         let state = self.state.clone();
+        let device_info = self.device_info.clone();
         let state_tx = self.state_tx.clone();
         let model = self.model;
 
@@ -90,7 +93,7 @@ impl Venty {
 
             while let Some(data) = stream.next().await {
                 Self::debug_dump_notification(&data.value);
-                Self::handle_notification_inner(&state, &state_tx, &data.value);
+                Self::handle_notification_inner(&state, &device_info, &state_tx, model, &data.value);
             }
 
             warn!("{model} notification stream ended (disconnect?)");
@@ -172,22 +175,24 @@ impl Venty {
 
     fn handle_notification_inner(
         state: &Arc<Mutex<DeviceState>>,
+        device_info: &Arc<Mutex<DeviceInfo>>,
         state_tx: &broadcast::Sender<DeviceState>,
+        _model: DeviceModel,
         data: &[u8],
     ) {
         if data.is_empty() {
             return;
         }
 
-        let mut state = match state.try_lock() {
-            Ok(s) => s,
-            Err(_) => return,
-        };
-
         let cmd_id = data[0];
 
         match cmd_id {
-            0x01 | 0x05 if data.len() >= 15 => {
+            0x01 | 0x05 if data.len() >= 15 && cmd_id == 0x01 => {
+                let mut state = match state.try_lock() {
+                    Ok(s) => s,
+                    Err(_) => return,
+                };
+
                 // Bytes 4+5: target temperature (u16 LE, /10)
                 if data.len() >= 6 {
                     let raw = u16::from_le_bytes([data[4], data[5]]);
@@ -254,10 +259,76 @@ impl Venty {
 
                 let _ = state_tx.send(state.clone());
             }
+            0x02 if data.len() >= 9 => {
+                // Firmware response: bytes 1-4 firmware version, bytes 5-8 bootloader version
+                let mut info = match device_info.try_lock() {
+                    Ok(i) => i,
+                    Err(_) => return,
+                };
+                let firmware = format!(
+                    "{}.{}.{}.{}",
+                    data[1], data[2], data[3], data[4]
+                );
+                let bootloader = format!(
+                    "{}.{}.{}.{}",
+                    data[5], data[6], data[7], data[8]
+                );
+                info.firmware_version = Some(firmware);
+                info.firmware_ble_version = Some(bootloader);
+                debug!(
+                    "Venty/Veazy firmware: {}, bootloader: {}",
+                    info.firmware_version.as_deref().unwrap_or("?"),
+                    info.firmware_ble_version.as_deref().unwrap_or("?")
+                );
+            }
+            0x04 if data.len() >= 7 => {
+                // Extended device data: bytes 1-3 heater runtime (uint24), bytes 4-6 charging time (uint24)
+                let mut info = match device_info.try_lock() {
+                    Ok(i) => i,
+                    Err(_) => return,
+                };
+                let heater_runtime =
+                    data[1] as u32 + (data[2] as u32) * 256 + (data[3] as u32) * 65536;
+                let charging_time =
+                    data[4] as u32 + (data[5] as u32) * 256 + (data[6] as u32) * 65536;
+                info.heater_runtime_minutes = Some(heater_runtime);
+                info.battery_charging_time_minutes = Some(charging_time);
+                debug!(
+                    "Venty/Veazy heater runtime: {heater_runtime}min, charging time: {charging_time}min"
+                );
+            }
+            0x05 if data.len() >= 19 => {
+                // Device data: serial number (bytes 9-14 + 15-16), color index (byte 18)
+                let mut info = match device_info.try_lock() {
+                    Ok(i) => i,
+                    Err(_) => return,
+                };
+                // Serial: prefix (bytes 15-16) + name (bytes 9-14)
+                let prefix = String::from_utf8_lossy(&data[15..17]);
+                let name = String::from_utf8_lossy(&data[9..15]);
+                info.serial_number = Some(format!("{prefix}{name}"));
+                info.color_index = Some(data[18]);
+                debug!(
+                    "Venty/Veazy serial: {}, color: {}",
+                    info.serial_number.as_deref().unwrap_or("?"),
+                    data[18]
+                );
+            }
+            0x06 if data.len() >= 7 => {
+                // Brightness/vibration/boost_timeout response
+                debug!(
+                    "Venty/Veazy brightness={}, vibration={}, boost_timeout={}",
+                    data[2], data[5], data[6]
+                );
+                // These are read-only responses; state is maintained via CMD 0x01 notifications
+            }
+            0x0d => {
+                // Find-my-device response (CMD 0x29 when entering advertising mode)
+                debug!("Venty/Veazy find-my-device response received");
+            }
             _ => {
                 debug!(
-                    "Venty/Veazy unhandled notification cmd=0x{:02X} len={}",
-                    cmd_id,
+                    "Venty/Veazy unhandled notification cmd=0x{cmd_id:02X} len={}",
                     data.len()
                 );
             }
@@ -365,7 +436,10 @@ impl VaporizerControl for Venty {
             ],
         );
         self.write_command(&buf).await?;
-        debug!("Venty/Veazy temperature unit set to {}", if celsius { "Celsius" } else { "Fahrenheit" });
+        debug!(
+            "Venty/Veazy temperature unit set to {}",
+            if celsius { "Celsius" } else { "Fahrenheit" }
+        );
         Ok(())
     }
 
@@ -373,7 +447,7 @@ impl VaporizerControl for Venty {
         let raw = celsius.round() as u8;
         let buf = utils::build_venty_command(
             0x01,
-            0x04,    // SET_BOOST mask
+            0x04, // SET_BOOST mask
             &[(6, raw)],
         );
         self.write_command(&buf).await?;
@@ -385,7 +459,7 @@ impl VaporizerControl for Venty {
         let raw = celsius.round() as u8;
         let buf = utils::build_venty_command(
             0x01,
-            0x08,    // SET_SUPERBOOST mask
+            0x08, // SET_SUPERBOOST mask
             &[(7, raw)],
         );
         self.write_command(&buf).await?;
@@ -406,7 +480,7 @@ impl VaporizerControl for Venty {
         Ok(())
     }
 
-    async fn set_heater_mode(&self, mode: crate::device::HeaterMode) -> Result<(), StorzError> {
+    async fn set_heater_mode(&self, mode: HeaterMode) -> Result<(), StorzError> {
         let buf = utils::build_venty_command(
             0x01,
             0x20,                // HEATER mask
@@ -515,13 +589,27 @@ impl VaporizerControl for Venty {
     }
 
     async fn get_device_info(&self) -> Result<DeviceInfo, StorzError> {
-        // CMD 0x05 requests device data; result comes via notification.
-        // We can only return cached data from the last notification.
+        // Request firmware data via CMD 0x02
+        let buf = utils::build_venty_command(0x02, 0, &[]);
+        self.write_command(&buf).await?;
+        // Request extended data via CMD 0x04
+        let buf = utils::build_venty_command(0x04, 0, &[]);
+        self.write_command(&buf).await?;
+        // Request device data via CMD 0x05
         let buf = utils::build_venty_command(0x05, 0, &[]);
         self.write_command(&buf).await?;
-        debug!("Venty/Veazy device info request sent");
-        // Return default; real data arrives asynchronously via notifications.
-        Ok(DeviceInfo::default())
+        debug!("Venty/Veazy device info requests sent");
+        // Return cached data from notification parsing
+        let info = self.device_info.lock().await;
+        Ok(info.clone())
+    }
+
+    async fn find_my_device(&self) -> Result<(), StorzError> {
+        // CMD 0x0D (13) with mask 0x01
+        let buf = utils::build_venty_command(0x0D, 0x01, &[]);
+        self.write_command(&buf).await?;
+        debug!("Venty/Veazy find-my-device triggered");
+        Ok(())
     }
 
     fn device_model(&self) -> DeviceModel {

@@ -162,6 +162,23 @@ pub trait VaporizerControl: Send + Sync {
         })
     }
 
+    /// Set the auto-shutoff time in seconds (Volcano).
+    async fn set_shutoff_time(&self, _seconds: u16) -> Result<(), StorzError> {
+        Err(StorzError::UnsupportedOperation {
+            device: "unknown".into(),
+            operation: "set_shutoff_time".into(),
+        })
+    }
+
+    /// Trigger the "find my device" feature (Venty/Veazy).
+    /// Makes the device vibrate or beep to locate it.
+    async fn find_my_device(&self) -> Result<(), StorzError> {
+        Err(StorzError::UnsupportedOperation {
+            device: "unknown".into(),
+            operation: "find_my_device".into(),
+        })
+    }
+
     /// Return the device model.
     fn device_model(&self) -> DeviceModel;
 }
