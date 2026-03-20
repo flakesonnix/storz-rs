@@ -1,6 +1,6 @@
 [package]
 name = "storz-rs"
-version = "0.1.5"
+version = "0.2.0"
 edition = "2024"
 rust-version = "1.85"
 description = "Rust library for controlling Storz & Bickel vaporizers via Bluetooth Low Energy"
