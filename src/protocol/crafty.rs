@@ -230,6 +230,32 @@ impl VaporizerControl for Crafty {
         Ok(())
     }
 
+    async fn set_auto_off_countdown(&self, seconds: u16) -> Result<(), StorzError> {
+        let ch = self.characteristic(CRAFTY_AUTO_OFF_COUNTDOWN).await?;
+        let raw = seconds.to_le_bytes();
+        self.peripheral
+            .write(&ch, &raw, WriteType::WithoutResponse)
+            .await?;
+        debug!("Crafty auto-off countdown set to {seconds}s");
+        Ok(())
+    }
+
+    async fn get_project_register(&self) -> Result<u16, StorzError> {
+        let ch = self.characteristic(CRAFTY_PROJECT_REGISTER).await?;
+        let data = self.peripheral.read(&ch).await?;
+        utils::raw_to_u16(&data)
+    }
+
+    async fn set_security_code(&self, code: u16) -> Result<(), StorzError> {
+        let ch = self.characteristic(CRAFTY_SICHERHEITSCODE).await?;
+        let raw = code.to_le_bytes();
+        self.peripheral
+            .write(&ch, &raw, WriteType::WithoutResponse)
+            .await?;
+        debug!("Crafty security code set");
+        Ok(())
+    }
+
     fn device_model(&self) -> DeviceModel {
         DeviceModel::Crafty
     }

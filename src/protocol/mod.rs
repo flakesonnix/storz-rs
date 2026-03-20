@@ -195,6 +195,30 @@ pub trait VaporizerControl: Send + Sync {
         })
     }
 
+    /// Set the auto-off countdown in seconds (Crafty).
+    async fn set_auto_off_countdown(&self, _seconds: u16) -> Result<(), StorzError> {
+        Err(StorzError::UnsupportedOperation {
+            device: "unknown".into(),
+            operation: "set_auto_off_countdown".into(),
+        })
+    }
+
+    /// Read the project register value (Crafty).
+    async fn get_project_register(&self) -> Result<u16, StorzError> {
+        Err(StorzError::UnsupportedOperation {
+            device: "unknown".into(),
+            operation: "get_project_register".into(),
+        })
+    }
+
+    /// Write the security code (Crafty+).
+    async fn set_security_code(&self, _code: u16) -> Result<(), StorzError> {
+        Err(StorzError::UnsupportedOperation {
+            device: "unknown".into(),
+            operation: "set_security_code".into(),
+        })
+    }
+
     /// Return the device model.
     fn device_model(&self) -> DeviceModel;
 }

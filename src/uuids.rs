@@ -70,3 +70,5 @@ pub const CRAFTY_USE_HOURS: Uuid = uuid::uuid!("00000023-4c45-4b43-4942-265a524f
 pub const CRAFTY_USE_MINUTES: Uuid = uuid::uuid!("000001e3-4c45-4b43-4942-265a524f5453");
 pub const CRAFTY_STATUS_REG2: Uuid = uuid::uuid!("000001c3-4c45-4b43-4942-265a524f5453");
 pub const CRAFTY_FACTORY_RESET: Uuid = uuid::uuid!("000001d3-4c45-4b43-4942-265a524f5453");
+pub const CRAFTY_PROJECT_REGISTER: Uuid = uuid::uuid!("00000093-4c45-4b43-4942-265a524f5453");
+pub const CRAFTY_SICHERHEITSCODE: Uuid = uuid::uuid!("000001b3-4c45-4b43-4942-265a524f5453");
