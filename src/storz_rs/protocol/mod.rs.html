@@ -229,7 +229,19 @@
 <a href=#229 id=229 data-nosnippet>229</a>        })
 <a href=#230 id=230 data-nosnippet>230</a>    }
 <a href=#231 id=231 data-nosnippet>231</a>
-<a href=#232 id=232 data-nosnippet>232</a>    <span class="doccomment">/// Return the device model.
-<a href=#233 id=233 data-nosnippet>233</a>    </span><span class="kw">fn </span>device_model(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; DeviceModel;
-<a href=#234 id=234 data-nosnippet>234</a>}
+<a href=#232 id=232 data-nosnippet>232</a>    <span class="doccomment">/// Read the battery level (0-100%), if available.
+<a href=#233 id=233 data-nosnippet>233</a>    </span><span class="kw">async fn </span>get_battery_level(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;u8&gt;, StorzError&gt; {
+<a href=#234 id=234 data-nosnippet>234</a>        <span class="kw">let </span>state = <span class="self">self</span>.get_state().<span class="kw">await</span><span class="question-mark">?</span>;
+<a href=#235 id=235 data-nosnippet>235</a>        <span class="prelude-val">Ok</span>(state.settings.and_then(|s| s.battery_level))
+<a href=#236 id=236 data-nosnippet>236</a>    }
+<a href=#237 id=237 data-nosnippet>237</a>
+<a href=#238 id=238 data-nosnippet>238</a>    <span class="doccomment">/// Read whether the device is charging, if available.
+<a href=#239 id=239 data-nosnippet>239</a>    </span><span class="kw">async fn </span>get_is_charging(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;bool&gt;, StorzError&gt; {
+<a href=#240 id=240 data-nosnippet>240</a>        <span class="kw">let </span>state = <span class="self">self</span>.get_state().<span class="kw">await</span><span class="question-mark">?</span>;
+<a href=#241 id=241 data-nosnippet>241</a>        <span class="prelude-val">Ok</span>(state.settings.map(|s| s.is_charging))
+<a href=#242 id=242 data-nosnippet>242</a>    }
+<a href=#243 id=243 data-nosnippet>243</a>
+<a href=#244 id=244 data-nosnippet>244</a>    <span class="doccomment">/// Return the device model.
+<a href=#245 id=245 data-nosnippet>245</a>    </span><span class="kw">fn </span>device_model(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; DeviceModel;
+<a href=#246 id=246 data-nosnippet>246</a>}
 </code></pre></div></section></main></body></html>
