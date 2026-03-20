@@ -83,11 +83,6 @@ pub fn fahrenheit_to_celsius(fahrenheit: f32) -> f32 {
     (fahrenheit - 32.0) / 1.8
 }
 
-/// Round to nearest integer.
-pub fn round_f32(value: f32) -> f32 {
-    value.round()
-}
-
 /// Build a 20-byte Venty/Veazy command buffer.
 ///
 /// `cmd_id` goes in byte[0], `mask` in byte[1], and `payload` is a list of
@@ -102,11 +97,6 @@ pub fn build_venty_command(cmd_id: u8, mask: u8, payload: &[(usize, u8)]) -> [u8
         }
     }
     buf
-}
-
-/// Build a 20-byte Venty/Veazy command from a complete byte array.
-pub fn build_venty_command_from_bytes(data: &[u8; 20]) -> [u8; 20] {
-    *data
 }
 
 #[cfg(test)]
