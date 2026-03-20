@@ -320,4 +320,14 @@ mod tests {
         assert_eq!(balloon.steps[0].temperature, 170.0);
         assert_eq!(balloon.steps[10].temperature, 220.0);
     }
+
+    #[test]
+    fn test_workflow_state_transitions() {
+        let runner = WorkflowRunner::new();
+        assert_eq!(
+            futures::executor::block_on(runner.state()),
+            WorkflowState::Idle
+        );
+        assert_eq!(futures::executor::block_on(runner.current_step()), 0);
+    }
 }
