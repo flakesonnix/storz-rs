@@ -229,6 +229,18 @@ pub trait VaporizerControl: Send + Sync {
         })
     }
 
+    /// Read the battery level (0-100%), if available.
+    async fn get_battery_level(&self) -> Result<Option<u8>, StorzError> {
+        let state = self.get_state().await?;
+        Ok(state.settings.and_then(|s| s.battery_level))
+    }
+
+    /// Read whether the device is charging, if available.
+    async fn get_is_charging(&self) -> Result<Option<bool>, StorzError> {
+        let state = self.get_state().await?;
+        Ok(state.settings.map(|s| s.is_charging))
+    }
+
     /// Return the device model.
     fn device_model(&self) -> DeviceModel;
 }

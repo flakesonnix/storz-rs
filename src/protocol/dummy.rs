@@ -486,4 +486,18 @@ mod tests {
         // Clean up - the workflow will timeout and return error
         handle.abort();
     }
+
+    #[tokio::test]
+    async fn test_dummy_device_battery_level() {
+        let device = DummyDevice::new();
+        let battery = device.get_battery_level().await.unwrap();
+        assert_eq!(battery, Some(85));
+    }
+
+    #[tokio::test]
+    async fn test_dummy_device_is_charging() {
+        let device = DummyDevice::new();
+        let charging = device.get_is_charging().await.unwrap();
+        assert_eq!(charging, Some(false));
+    }
 }
