@@ -10,7 +10,7 @@ use tokio::sync::{Mutex, broadcast};
 use tokio_stream::wrappers::BroadcastStream;
 use tracing::{debug, warn};
 
-use crate::device::{DeviceModel, DeviceState, volcano_flags};
+use crate::device::{DeviceInfo, DeviceModel, DeviceState, volcano_flags, volcano_vibration_flags};
 use crate::error::StorzError;
 use crate::protocol::VaporizerControl;
 use crate::utils;
@@ -51,6 +51,18 @@ impl VolcanoHybrid {
             .write(&ch, &[0x00], WriteType::WithoutResponse)
             .await?;
         Ok(())
+    }
+
+    async fn read_string(&self, uuid: uuid::Uuid) -> Result<String, StorzError> {
+        let ch = self.characteristic(uuid).await?;
+        let data = self.peripheral.read(&ch).await?;
+        String::from_utf8(data).map_err(|e| StorzError::ParseError(format!("Invalid UTF-8: {e}")))
+    }
+
+    async fn read_u16(&self, uuid: uuid::Uuid) -> Result<u16, StorzError> {
+        let ch = self.characteristic(uuid).await?;
+        let data = self.peripheral.read(&ch).await?;
+        utils::raw_to_u16(&data)
     }
 
     async fn init_notifications(&self) -> Result<(), StorzError> {
@@ -198,6 +210,47 @@ impl VaporizerControl for VolcanoHybrid {
         Ok(Box::pin(
             BroadcastStream::new(rx).filter_map(|r| async move { r.ok() }),
         ))
+    }
+
+    async fn set_brightness(&self, value: u16) -> Result<(), StorzError> {
+        let ch = self.characteristic(VOLCANO_BRIGHTNESS).await?;
+        let raw = (value as u16).to_le_bytes();
+        self.peripheral
+            .write(&ch, &raw, WriteType::WithoutResponse)
+            .await?;
+        debug!("Volcano brightness set to {value}");
+        Ok(())
+    }
+
+    async fn set_vibration(&self, on: bool) -> Result<(), StorzError> {
+        let ch = self.characteristic(VOLCANO_VIBRATION).await?;
+        let raw: u32 = if on {
+            volcano_vibration_flags::VIBRATION
+        } else {
+            0x10000 + volcano_vibration_flags::VIBRATION
+        };
+        self.peripheral
+            .write(&ch, &raw.to_le_bytes(), WriteType::WithoutResponse)
+            .await?;
+        debug!("Volcano vibration set to {on}");
+        Ok(())
+    }
+
+    async fn get_device_info(&self) -> Result<DeviceInfo, StorzError> {
+        let serial_number = self.read_string(VOLCANO_SERIAL_NUMBER).await.ok();
+        let firmware_version = self.read_string(VOLCANO_FIRMWARE_VERSION).await.ok();
+        let firmware_ble_version = self.read_string(VOLCANO_FIRMWARE_BLE_VERSION).await.ok();
+        let hours_of_heating = self.read_u16(VOLCANO_HOURS_OF_HEATING).await.ok();
+        let minutes_of_heating = self.read_u16(VOLCANO_MINUTES_OF_HEATING).await.ok();
+
+        Ok(DeviceInfo {
+            serial_number,
+            firmware_version,
+            firmware_ble_version,
+            hours_of_heating,
+            minutes_of_heating,
+            ..Default::default()
+        })
     }
 
     fn device_model(&self) -> DeviceModel {
