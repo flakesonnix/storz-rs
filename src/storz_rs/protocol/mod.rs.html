@@ -179,7 +179,23 @@
 <a href=#179 id=179 data-nosnippet>179</a>        })
 <a href=#180 id=180 data-nosnippet>180</a>    }
 <a href=#181 id=181 data-nosnippet>181</a>
-<a href=#182 id=182 data-nosnippet>182</a>    <span class="doccomment">/// Return the device model.
-<a href=#183 id=183 data-nosnippet>183</a>    </span><span class="kw">fn </span>device_model(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; DeviceModel;
-<a href=#184 id=184 data-nosnippet>184</a>}
+<a href=#182 id=182 data-nosnippet>182</a>    <span class="doccomment">/// Set display-on-cooling mode (Volcano Hybrid).
+<a href=#183 id=183 data-nosnippet>183</a>    </span><span class="kw">async fn </span>set_display_on_cooling(<span class="kw-2">&amp;</span><span class="self">self</span>, _on: bool) -&gt; <span class="prelude-ty">Result</span>&lt;(), StorzError&gt; {
+<a href=#184 id=184 data-nosnippet>184</a>        <span class="prelude-val">Err</span>(StorzError::UnsupportedOperation {
+<a href=#185 id=185 data-nosnippet>185</a>            device: <span class="string">"unknown"</span>.into(),
+<a href=#186 id=186 data-nosnippet>186</a>            operation: <span class="string">"set_display_on_cooling"</span>.into(),
+<a href=#187 id=187 data-nosnippet>187</a>        })
+<a href=#188 id=188 data-nosnippet>188</a>    }
+<a href=#189 id=189 data-nosnippet>189</a>
+<a href=#190 id=190 data-nosnippet>190</a>    <span class="doccomment">/// Set boost/superboost timeout in seconds (Venty/Veazy).
+<a href=#191 id=191 data-nosnippet>191</a>    </span><span class="kw">async fn </span>set_boost_timeout(<span class="kw-2">&amp;</span><span class="self">self</span>, _seconds: u8) -&gt; <span class="prelude-ty">Result</span>&lt;(), StorzError&gt; {
+<a href=#192 id=192 data-nosnippet>192</a>        <span class="prelude-val">Err</span>(StorzError::UnsupportedOperation {
+<a href=#193 id=193 data-nosnippet>193</a>            device: <span class="string">"unknown"</span>.into(),
+<a href=#194 id=194 data-nosnippet>194</a>            operation: <span class="string">"set_boost_timeout"</span>.into(),
+<a href=#195 id=195 data-nosnippet>195</a>        })
+<a href=#196 id=196 data-nosnippet>196</a>    }
+<a href=#197 id=197 data-nosnippet>197</a>
+<a href=#198 id=198 data-nosnippet>198</a>    <span class="doccomment">/// Return the device model.
+<a href=#199 id=199 data-nosnippet>199</a>    </span><span class="kw">fn </span>device_model(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; DeviceModel;
+<a href=#200 id=200 data-nosnippet>200</a>}
 </code></pre></div></section></main></body></html>

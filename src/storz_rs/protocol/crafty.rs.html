@@ -221,8 +221,17 @@
 <a href=#221 id=221 data-nosnippet>221</a>        })
 <a href=#222 id=222 data-nosnippet>222</a>    }
 <a href=#223 id=223 data-nosnippet>223</a>
-<a href=#224 id=224 data-nosnippet>224</a>    <span class="kw">fn </span>device_model(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; DeviceModel {
-<a href=#225 id=225 data-nosnippet>225</a>        DeviceModel::Crafty
-<a href=#226 id=226 data-nosnippet>226</a>    }
-<a href=#227 id=227 data-nosnippet>227</a>}
+<a href=#224 id=224 data-nosnippet>224</a>    <span class="kw">async fn </span>factory_reset(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;(), StorzError&gt; {
+<a href=#225 id=225 data-nosnippet>225</a>        <span class="kw">let </span>ch = <span class="self">self</span>.characteristic(CRAFTY_FACTORY_RESET).<span class="kw">await</span><span class="question-mark">?</span>;
+<a href=#226 id=226 data-nosnippet>226</a>        <span class="self">self</span>.peripheral
+<a href=#227 id=227 data-nosnippet>227</a>            .write(<span class="kw-2">&amp;</span>ch, <span class="kw-2">&amp;</span>[<span class="number">0x00</span>], WriteType::WithoutResponse)
+<a href=#228 id=228 data-nosnippet>228</a>            .<span class="kw">await</span><span class="question-mark">?</span>;
+<a href=#229 id=229 data-nosnippet>229</a>        <span class="macro">debug!</span>(<span class="string">"Crafty factory reset triggered"</span>);
+<a href=#230 id=230 data-nosnippet>230</a>        <span class="prelude-val">Ok</span>(())
+<a href=#231 id=231 data-nosnippet>231</a>    }
+<a href=#232 id=232 data-nosnippet>232</a>
+<a href=#233 id=233 data-nosnippet>233</a>    <span class="kw">fn </span>device_model(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; DeviceModel {
+<a href=#234 id=234 data-nosnippet>234</a>        DeviceModel::Crafty
+<a href=#235 id=235 data-nosnippet>235</a>    }
+<a href=#236 id=236 data-nosnippet>236</a>}
 </code></pre></div></section></main></body></html>
