@@ -8,16 +8,23 @@ use futures::StreamExt;
 use tokio::sync::{Mutex, RwLock, broadcast};
 use tokio_stream::wrappers::BroadcastStream;
 
-use crate::device::{DeviceModel, DeviceSettings, DeviceState};
+use crate::device::{DeviceModel, DeviceSettings, DeviceState, HeaterMode};
 use crate::error::StorzError;
 use crate::protocol::VaporizerControl;
 
 /// Dummy device for testing without BLE hardware.
+///
+/// Simulates a Venty-like device with temperature ramping,
+/// heater control, and settings management.
 pub struct DummyDevice {
     state: Arc<Mutex<DeviceState>>,
     state_tx: broadcast::Sender<DeviceState>,
     target: Arc<RwLock<f32>>,
     heater: Arc<RwLock<bool>>,
+    pump: Arc<RwLock<bool>>,
+    brightness: Arc<RwLock<u16>>,
+    vibration: Arc<RwLock<bool>>,
+    shutoff_time: Arc<RwLock<u16>>,
 }
 
 impl DummyDevice {
@@ -25,13 +32,17 @@ impl DummyDevice {
         let (state_tx, _) = broadcast::channel(16);
         let target = Arc::new(RwLock::new(180.0));
         let heater = Arc::new(RwLock::new(false));
+        let pump = Arc::new(RwLock::new(false));
+        let brightness = Arc::new(RwLock::new(50));
+        let vibration = Arc::new(RwLock::new(true));
+        let shutoff_time = Arc::new(RwLock::new(300));
 
         let state = Arc::new(Mutex::new(DeviceState {
             current_temp: Some(22.0),
             target_temp: Some(180.0),
-            boost_temp: None,
-            super_boost_temp: None,
-            heater_mode: None,
+            boost_temp: Some(5.0),
+            super_boost_temp: Some(10.0),
+            heater_mode: Some(HeaterMode::Off),
             heater_on: false,
             pump_on: false,
             fan_on: false,
@@ -41,6 +52,9 @@ impl DummyDevice {
                 is_celsius: true,
                 battery_level: Some(85),
                 auto_shutdown_seconds: Some(300),
+                is_charging: false,
+                boost_visualization: true,
+                vibration: true,
                 ..Default::default()
             }),
         }));
@@ -50,9 +64,13 @@ impl DummyDevice {
             state_tx: state_tx.clone(),
             target: target.clone(),
             heater: heater.clone(),
+            pump: pump.clone(),
+            brightness: brightness.clone(),
+            vibration: vibration.clone(),
+            shutoff_time: shutoff_time.clone(),
         };
 
-        device.spawn_simulator(state, state_tx, target, heater);
+        device.spawn_simulator(state, state_tx, target, heater, pump);
         device
     }
 
@@ -62,6 +80,7 @@ impl DummyDevice {
         state_tx: broadcast::Sender<DeviceState>,
         target: Arc<RwLock<f32>>,
         heater: Arc<RwLock<bool>>,
+        pump: Arc<RwLock<bool>>,
     ) {
         tokio::spawn(async move {
             let mut interval = tokio::time::interval(Duration::from_secs(1));
@@ -71,9 +90,17 @@ impl DummyDevice {
                 let mut s = state.lock().await;
                 let tgt = *target.read().await;
                 let is_heating = *heater.read().await;
+                let is_pumping = *pump.read().await;
 
                 s.target_temp = Some(tgt);
                 s.heater_on = is_heating;
+                s.pump_on = is_pumping;
+
+                if is_heating {
+                    s.heater_mode = Some(HeaterMode::Normal);
+                } else {
+                    s.heater_mode = Some(HeaterMode::Off);
+                }
 
                 if let Some(cur) = s.current_temp {
                     let new_temp = if is_heating {
@@ -124,6 +151,7 @@ impl VaporizerControl for DummyDevice {
         *self.heater.write().await = true;
         let mut state = self.state.lock().await;
         state.heater_on = true;
+        state.heater_mode = Some(HeaterMode::Normal);
         Ok(())
     }
 
@@ -131,21 +159,22 @@ impl VaporizerControl for DummyDevice {
         *self.heater.write().await = false;
         let mut state = self.state.lock().await;
         state.heater_on = false;
+        state.heater_mode = Some(HeaterMode::Off);
         Ok(())
     }
 
     async fn pump_on(&self) -> Result<(), StorzError> {
-        Err(StorzError::UnsupportedOperation {
-            device: "DummyDevice".into(),
-            operation: "pump_on".into(),
-        })
+        *self.pump.write().await = true;
+        let mut state = self.state.lock().await;
+        state.pump_on = true;
+        Ok(())
     }
 
     async fn pump_off(&self) -> Result<(), StorzError> {
-        Err(StorzError::UnsupportedOperation {
-            device: "DummyDevice".into(),
-            operation: "pump_off".into(),
-        })
+        *self.pump.write().await = false;
+        let mut state = self.state.lock().await;
+        state.pump_on = false;
+        Ok(())
     }
 
     async fn get_state(&self) -> Result<DeviceState, StorzError> {
@@ -170,7 +199,234 @@ impl VaporizerControl for DummyDevice {
             .ok_or(StorzError::ParseError("Settings not available".into()))
     }
 
+    async fn set_temperature_unit(&self, celsius: bool) -> Result<(), StorzError> {
+        let mut state = self.state.lock().await;
+        if let Some(ref mut settings) = state.settings {
+            settings.is_celsius = celsius;
+        }
+        Ok(())
+    }
+
+    async fn set_brightness(&self, value: u16) -> Result<(), StorzError> {
+        *self.brightness.write().await = value;
+        Ok(())
+    }
+
+    async fn set_vibration(&self, on: bool) -> Result<(), StorzError> {
+        *self.vibration.write().await = on;
+        let mut state = self.state.lock().await;
+        if let Some(ref mut settings) = state.settings {
+            settings.vibration = on;
+        }
+        Ok(())
+    }
+
+    async fn set_shutoff_time(&self, seconds: u16) -> Result<(), StorzError> {
+        *self.shutoff_time.write().await = seconds;
+        let mut state = self.state.lock().await;
+        if let Some(ref mut settings) = state.settings {
+            settings.auto_shutdown_seconds = Some(seconds);
+        }
+        Ok(())
+    }
+
+    async fn set_boost_temperature(&self, celsius: f32) -> Result<(), StorzError> {
+        let mut state = self.state.lock().await;
+        state.boost_temp = Some(celsius);
+        Ok(())
+    }
+
+    async fn set_super_boost_temperature(&self, celsius: f32) -> Result<(), StorzError> {
+        let mut state = self.state.lock().await;
+        state.super_boost_temp = Some(celsius);
+        Ok(())
+    }
+
+    async fn set_heater_mode(&self, mode: HeaterMode) -> Result<(), StorzError> {
+        let mut state = self.state.lock().await;
+        state.heater_mode = Some(mode);
+        state.heater_on = mode != HeaterMode::Off;
+        if mode != HeaterMode::Off {
+            *self.heater.write().await = true;
+        } else {
+            *self.heater.write().await = false;
+        }
+        Ok(())
+    }
+
+    async fn set_auto_shutdown_timer(&self, seconds: u16) -> Result<(), StorzError> {
+        let mut state = self.state.lock().await;
+        if let Some(ref mut settings) = state.settings {
+            settings.auto_shutdown_seconds = Some(seconds);
+        }
+        Ok(())
+    }
+
     fn device_model(&self) -> DeviceModel {
         DeviceModel::Venty
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn test_dummy_device_temperature() {
+        let device = DummyDevice::new();
+        let current = device.get_current_temperature().await.unwrap();
+        assert!(current > 20.0);
+        assert!(current < 25.0);
+
+        let target = device.get_target_temperature().await.unwrap();
+        assert!((target - 180.0).abs() < 0.01);
+    }
+
+    #[tokio::test]
+    async fn test_dummy_device_heater() {
+        let device = DummyDevice::new();
+        assert!(!device.get_state().await.unwrap().heater_on);
+
+        device.heater_on().await.unwrap();
+        assert!(device.get_state().await.unwrap().heater_on);
+
+        device.heater_off().await.unwrap();
+        assert!(!device.get_state().await.unwrap().heater_on);
+    }
+
+    #[tokio::test]
+    async fn test_dummy_device_pump() {
+        let device = DummyDevice::new();
+        assert!(!device.get_state().await.unwrap().pump_on);
+
+        device.pump_on().await.unwrap();
+        assert!(device.get_state().await.unwrap().pump_on);
+
+        device.pump_off().await.unwrap();
+        assert!(!device.get_state().await.unwrap().pump_on);
+    }
+
+    #[tokio::test]
+    async fn test_dummy_device_set_temperature() {
+        let device = DummyDevice::new();
+        device.set_target_temperature(200.0).await.unwrap();
+        let target = device.get_target_temperature().await.unwrap();
+        // DummyDevice rounds to even numbers
+        assert!((target - 200.0).abs() < 1.0);
+    }
+
+    #[tokio::test]
+    async fn test_dummy_device_temperature_ramping() {
+        let device = DummyDevice::new();
+        device.set_target_temperature(50.0).await.unwrap();
+        device.heater_on().await.unwrap();
+
+        tokio::time::sleep(Duration::from_secs(3)).await;
+
+        let current = device.get_current_temperature().await.unwrap();
+        let initial = 22.0;
+        assert!(current > initial, "Temperature should increase when heating");
+    }
+
+    #[tokio::test]
+    async fn test_dummy_device_settings() {
+        let device = DummyDevice::new();
+        let settings = device.get_settings().await.unwrap();
+        assert!(settings.is_celsius);
+        assert_eq!(settings.battery_level, Some(85));
+    }
+
+    #[tokio::test]
+    async fn test_dummy_device_temperature_unit() {
+        let device = DummyDevice::new();
+
+        device.set_temperature_unit(false).await.unwrap();
+        let settings = device.get_settings().await.unwrap();
+        assert!(!settings.is_celsius);
+
+        device.set_temperature_unit(true).await.unwrap();
+        let settings = device.get_settings().await.unwrap();
+        assert!(settings.is_celsius);
+    }
+
+    #[tokio::test]
+    async fn test_dummy_device_brightness() {
+        let device = DummyDevice::new();
+        device.set_brightness(75).await.unwrap();
+        // Verify via internal state (no getter in trait)
+        assert_eq!(*device.brightness.read().await, 75);
+    }
+
+    #[tokio::test]
+    async fn test_dummy_device_vibration() {
+        let device = DummyDevice::new();
+
+        device.set_vibration(false).await.unwrap();
+        let settings = device.get_settings().await.unwrap();
+        assert!(!settings.vibration);
+
+        device.set_vibration(true).await.unwrap();
+        let settings = device.get_settings().await.unwrap();
+        assert!(settings.vibration);
+    }
+
+    #[tokio::test]
+    async fn test_dummy_device_heater_mode() {
+        let device = DummyDevice::new();
+
+        device.set_heater_mode(HeaterMode::Normal).await.unwrap();
+        let state = device.get_state().await.unwrap();
+        assert_eq!(state.heater_mode, Some(HeaterMode::Normal));
+        assert!(state.heater_on);
+
+        device.set_heater_mode(HeaterMode::Boost).await.unwrap();
+        let state = device.get_state().await.unwrap();
+        assert_eq!(state.heater_mode, Some(HeaterMode::Boost));
+
+        device.set_heater_mode(HeaterMode::Off).await.unwrap();
+        let state = device.get_state().await.unwrap();
+        assert_eq!(state.heater_mode, Some(HeaterMode::Off));
+        assert!(!state.heater_on);
+    }
+
+    #[tokio::test]
+    async fn test_dummy_device_shutoff_time() {
+        let device = DummyDevice::new();
+
+        device.set_shutoff_time(600).await.unwrap();
+        let settings = device.get_settings().await.unwrap();
+        assert_eq!(settings.auto_shutdown_seconds, Some(600));
+    }
+
+    #[tokio::test]
+    async fn test_dummy_device_boost_temperature() {
+        let device = DummyDevice::new();
+
+        device.set_boost_temperature(8.0).await.unwrap();
+        let state = device.get_state().await.unwrap();
+        assert_eq!(state.boost_temp, Some(8.0));
+
+        device.set_super_boost_temperature(15.0).await.unwrap();
+        let state = device.get_state().await.unwrap();
+        assert_eq!(state.super_boost_temp, Some(15.0));
+    }
+
+    #[tokio::test]
+    async fn test_dummy_device_model() {
+        let device = DummyDevice::new();
+        assert_eq!(device.device_model(), DeviceModel::Venty);
+    }
+
+    #[tokio::test]
+    async fn test_dummy_device_subscribe_state() {
+        let device = DummyDevice::new();
+        let mut stream = device.subscribe_state().await.unwrap();
+
+        // Should receive at least one state update
+        let state = tokio::time::timeout(Duration::from_secs(3), stream.next())
+            .await
+            .expect("Timeout waiting for state")
+            .expect("Stream ended unexpectedly");
+        assert!(state.current_temp.is_some());
     }
 }
