@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"enum":["DeviceModel"],"mod":["volcano_flags"],"struct":["DeviceSettings","DeviceState"]};
+window.SIDEBAR_ITEMS = {"enum":["DeviceModel","HeaterMode"],"mod":["volcano_flags","volcano_vibration_flags"],"struct":["DeviceInfo","DeviceSettings","DeviceState"]};
