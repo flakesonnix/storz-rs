@@ -214,7 +214,7 @@ impl VaporizerControl for VolcanoHybrid {
 
     async fn set_brightness(&self, value: u16) -> Result<(), StorzError> {
         let ch = self.characteristic(VOLCANO_BRIGHTNESS).await?;
-        let raw = (value as u16).to_le_bytes();
+        let raw = value.to_le_bytes();
         self.peripheral
             .write(&ch, &raw, WriteType::WithoutResponse)
             .await?;

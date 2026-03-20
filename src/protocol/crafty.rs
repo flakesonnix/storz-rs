@@ -9,7 +9,7 @@ use tokio::sync::{Mutex, broadcast};
 use tokio_stream::wrappers::BroadcastStream;
 use tracing::{debug, warn};
 
-use crate::device::{DeviceModel, DeviceState};
+use crate::device::{DeviceInfo, DeviceModel, DeviceState};
 use crate::error::StorzError;
 use crate::protocol::VaporizerControl;
 use crate::utils;
@@ -42,6 +42,18 @@ impl Crafty {
             .into_iter()
             .find(|c| c.uuid == uuid)
             .ok_or_else(|| StorzError::ParseError(format!("Characteristic {uuid} not found")))
+    }
+
+    async fn read_string(&self, uuid: uuid::Uuid) -> Result<String, StorzError> {
+        let ch = self.characteristic(uuid).await?;
+        let data = self.peripheral.read(&ch).await?;
+        String::from_utf8(data).map_err(|e| StorzError::ParseError(format!("Invalid UTF-8: {e}")))
+    }
+
+    async fn read_u16(&self, uuid: uuid::Uuid) -> Result<u16, StorzError> {
+        let ch = self.characteristic(uuid).await?;
+        let data = self.peripheral.read(&ch).await?;
+        utils::raw_to_u16(&data)
     }
 
     async fn init_notifications(&self) -> Result<(), StorzError> {
@@ -171,6 +183,42 @@ impl VaporizerControl for Crafty {
         Ok(Box::pin(
             BroadcastStream::new(rx).filter_map(|r| async move { r.ok() }),
         ))
+    }
+
+    async fn set_boost_temperature(&self, celsius: f32) -> Result<(), StorzError> {
+        let clamped = celsius.clamp(0.0, 30.0);
+        let ch = self.characteristic(CRAFTY_WRITE_BOOST_TEMP).await?;
+        let raw = ((clamped * 10.0).round() as u16).to_le_bytes();
+        self.peripheral
+            .write(&ch, &raw, WriteType::WithoutResponse)
+            .await?;
+        debug!("Crafty boost temp set to {clamped}°C");
+        Ok(())
+    }
+
+    async fn set_brightness(&self, value: u16) -> Result<(), StorzError> {
+        let ch = self.characteristic(CRAFTY_LED_BRIGHTNESS).await?;
+        let raw = value.to_le_bytes();
+        self.peripheral
+            .write(&ch, &raw, WriteType::WithoutResponse)
+            .await?;
+        debug!("Crafty LED brightness set to {value}");
+        Ok(())
+    }
+
+    async fn get_device_info(&self) -> Result<DeviceInfo, StorzError> {
+        let firmware_version = self.read_string(CRAFTY_FIRMWARE_VERSION).await.ok();
+        let firmware_ble_version = self.read_string(CRAFTY_FIRMWARE_BLE_VERSION).await.ok();
+        let hours_of_heating = self.read_u16(CRAFTY_USE_HOURS).await.ok();
+        let minutes_of_heating = self.read_u16(CRAFTY_USE_MINUTES).await.ok();
+
+        Ok(DeviceInfo {
+            firmware_version,
+            firmware_ble_version,
+            hours_of_heating,
+            minutes_of_heating,
+            ..Default::default()
+        })
     }
 
     fn device_model(&self) -> DeviceModel {
