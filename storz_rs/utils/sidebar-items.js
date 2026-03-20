@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"constant":["TEMP_MAX","TEMP_MIN"],"fn":["build_venty_command","build_venty_command_from_bytes","celsius_to_fahrenheit","celsius_to_raw_u16","celsius_to_raw_u32","fahrenheit_to_celsius","raw_to_celsius_u16","raw_to_celsius_u32","raw_to_u16","raw_to_u24","round_f32"]};
+window.SIDEBAR_ITEMS = {"constant":["TEMP_MAX","TEMP_MIN"],"fn":["build_venty_command","celsius_to_fahrenheit","celsius_to_raw_u16","celsius_to_raw_u32","fahrenheit_to_celsius","raw_to_celsius_u16","raw_to_celsius_u32","raw_to_u16","raw_to_u24"]};
