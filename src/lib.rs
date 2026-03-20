@@ -63,6 +63,7 @@ pub use workflow::{Workflow, WorkflowRunner, WorkflowState, WorkflowStep};
 
 use btleplug::api::Peripheral as _;
 use btleplug::platform::Peripheral;
+use std::time::Duration;
 use tracing::{debug, info};
 
 /// Auto-detect the device model from its advertised BLE services.
@@ -136,4 +137,33 @@ pub async fn connect(peripheral: Peripheral) -> Result<Box<dyn VaporizerControl>
     };
 
     Ok(controller)
+}
+
+/// Connect to a peripheral with a timeout.
+///
+/// Same as [`connect`] but fails with [`StorzError::Timeout`] if the connection
+/// or initialization takes longer than the specified duration.
+///
+/// # Example
+///
+/// ```no_run
+/// use std::time::Duration;
+/// use storz_rs::{discover_vaporizers, get_adapter, connect_with_timeout};
+///
+/// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
+/// let adapter = get_adapter().await?;
+/// let peripherals = discover_vaporizers(&adapter, Duration::from_secs(10)).await?;
+/// let peripheral = peripherals.into_iter().next().unwrap();
+///
+/// let device = connect_with_timeout(peripheral, Duration::from_secs(15)).await?;
+/// # Ok(())
+/// # }
+/// ```
+pub async fn connect_with_timeout(
+    peripheral: Peripheral,
+    timeout: Duration,
+) -> Result<Box<dyn VaporizerControl>, StorzError> {
+    tokio::time::timeout(timeout, connect(peripheral))
+        .await
+        .map_err(|_| StorzError::Timeout)?
 }
