@@ -15,10 +15,10 @@ A Rust library for controlling Storz & Bickel vaporizers over BLE. Built on [btl
 
 | Device | Tested | Notes |
 |--------|--------|-------|
-| Venty | ✅ | Temp, heater, auto init, live notifications |
-| Volcano Hybrid | ✅ | Temp, heater, pump, fan, activity stream |
+| Venty | ✅ | Full support: temp, heater, boost, brightness, vibration, settings |
+| Volcano Hybrid | ✅ | Full support: temp, heater, pump, fan, workflow automation |
 | Veazy | 🔬 | Same protocol as Venty |
-| Crafty+ | 🔬 | Temp, heater on/off, notifications |
+| Crafty+ | 🔬 | Temp, heater, boost, LED brightness, factory reset |
 
 > Venty and Volcano Hybrid have been verified with real hardware. Veazy and Crafty+ should work based on the shared protocol but haven't been tested yet. If you have one and want to help test, open an issue.
 
@@ -52,18 +52,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 ```toml
 [dependencies]
-storz-rs = "0.1"
+storz-rs = "0.2"
 ```
-
-## Examples
-
-```bash
-cargo run --example connect_venty
-cargo run --example connect_volcano
-cargo run --example monitor_state
-```
-
-Each example scans for nearby devices and connects to the first one it finds. `connect_venty` and `connect_volcano` are device-specific, `monitor_state` works with any device.
 
 ## API
 
@@ -79,6 +69,13 @@ Full docs at [docs.rs/storz-rs](https://docs.rs/storz-rs).
 | `get/set_target_temperature` | ✅ | ✅ | ✅ | ✅ |
 | `heater_on/off` | ✅ | ✅ | ✅ | ✅ |
 | `pump_on/off` | ✅ | ❌ | ❌ | ❌ |
+| `set_brightness` | ✅ | ✅ | ✅ | ✅ |
+| `set_vibration` | ✅ | ✅ | ✅ | ❌ |
+| `set_boost_temperature` | ❌ | ✅ | ✅ | ✅ |
+| `set_auto_shutdown_timer` | ✅ | ✅ | ✅ | ❌ |
+| `factory_reset` | ❌ | ✅ | ✅ | ✅ |
+| `find_my_device` | ❌ | ✅ | ✅ | ❌ |
+| `get_device_info` | ✅ | ✅ | ✅ | ✅ |
 | `subscribe_state` | ✅ | ✅ | ✅ | ✅ |
 
 `pump_on/off` returns `UnsupportedOperation` on devices without a pump.
