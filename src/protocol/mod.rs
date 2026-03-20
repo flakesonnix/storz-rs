@@ -12,7 +12,7 @@ use async_trait::async_trait;
 use futures::Stream;
 use std::pin::Pin;
 
-use crate::device::{DeviceModel, DeviceSettings, DeviceState};
+use crate::device::{DeviceInfo, DeviceModel, DeviceSettings, DeviceState};
 use crate::error::StorzError;
 
 /// Trait for controlling a Storz & Bickel vaporizer over BLE.
@@ -60,6 +60,105 @@ pub trait VaporizerControl: Send + Sync {
         Err(StorzError::UnsupportedOperation {
             device: "unknown".into(),
             operation: "set_temperature_unit".into(),
+        })
+    }
+
+    /// Set the boost temperature offset in Celsius (Venty/Veazy/Crafty).
+    async fn set_boost_temperature(&self, _celsius: f32) -> Result<(), StorzError> {
+        Err(StorzError::UnsupportedOperation {
+            device: "unknown".into(),
+            operation: "set_boost_temperature".into(),
+        })
+    }
+
+    /// Set the super-boost temperature offset in Celsius (Venty/Veazy).
+    async fn set_super_boost_temperature(&self, _celsius: f32) -> Result<(), StorzError> {
+        Err(StorzError::UnsupportedOperation {
+            device: "unknown".into(),
+            operation: "set_super_boost_temperature".into(),
+        })
+    }
+
+    /// Set the auto-shutdown timer in seconds (Venty/Veazy).
+    async fn set_auto_shutdown_timer(&self, _seconds: u16) -> Result<(), StorzError> {
+        Err(StorzError::UnsupportedOperation {
+            device: "unknown".into(),
+            operation: "set_auto_shutdown_timer".into(),
+        })
+    }
+
+    /// Set LED brightness (Volcano: 0-100, Venty/Veazy: 0-255).
+    async fn set_brightness(&self, _value: u16) -> Result<(), StorzError> {
+        Err(StorzError::UnsupportedOperation {
+            device: "unknown".into(),
+            operation: "set_brightness".into(),
+        })
+    }
+
+    /// Enable or disable vibration (Volcano/Venty/Veazy).
+    async fn set_vibration(&self, _on: bool) -> Result<(), StorzError> {
+        Err(StorzError::UnsupportedOperation {
+            device: "unknown".into(),
+            operation: "set_vibration".into(),
+        })
+    }
+
+    /// Trigger a factory reset (Venty/Veazy).
+    async fn factory_reset(&self) -> Result<(), StorzError> {
+        Err(StorzError::UnsupportedOperation {
+            device: "unknown".into(),
+            operation: "factory_reset".into(),
+        })
+    }
+
+    /// Set boost visualization (Venty/Veazy).
+    async fn set_boost_visualization(&self, _enabled: bool) -> Result<(), StorzError> {
+        Err(StorzError::UnsupportedOperation {
+            device: "unknown".into(),
+            operation: "set_boost_visualization".into(),
+        })
+    }
+
+    /// Set charge current optimization (Venty/Veazy).
+    async fn set_charge_current_optimization(&self, _enabled: bool) -> Result<(), StorzError> {
+        Err(StorzError::UnsupportedOperation {
+            device: "unknown".into(),
+            operation: "set_charge_current_optimization".into(),
+        })
+    }
+
+    /// Set charge voltage limit (Venty/Veazy).
+    async fn set_charge_voltage_limit(&self, _enabled: bool) -> Result<(), StorzError> {
+        Err(StorzError::UnsupportedOperation {
+            device: "unknown".into(),
+            operation: "set_charge_voltage_limit".into(),
+        })
+    }
+
+    /// Set permanent Bluetooth (Venty/Veazy).
+    async fn set_permanent_bluetooth(&self, _enabled: bool) -> Result<(), StorzError> {
+        Err(StorzError::UnsupportedOperation {
+            device: "unknown".into(),
+            operation: "set_permanent_bluetooth".into(),
+        })
+    }
+
+    /// Set heater mode (Venty/Veazy: 0=off, 1=normal, 2=boost, 3=superboost).
+    async fn set_heater_mode(
+        &self,
+        _mode: crate::device::HeaterMode,
+    ) -> Result<(), StorzError> {
+        Err(StorzError::UnsupportedOperation {
+            device: "unknown".into(),
+            operation: "set_heater_mode".into(),
+        })
+    }
+
+    /// Read device information (serial, firmware, etc.).
+    async fn get_device_info(&self) -> Result<DeviceInfo, StorzError> {
+        Err(StorzError::UnsupportedOperation {
+            device: "unknown".into(),
+            operation: "get_device_info".into(),
         })
     }
 

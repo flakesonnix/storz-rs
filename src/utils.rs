@@ -51,6 +51,43 @@ pub fn raw_to_celsius_u32(bytes: &[u8]) -> Result<f32, StorzError> {
     Ok((raw as f32) / 10.0)
 }
 
+/// Parse a u16 little-endian BLE value (raw, no conversion).
+pub fn raw_to_u16(bytes: &[u8]) -> Result<u16, StorzError> {
+    if bytes.len() < 2 {
+        return Err(StorzError::ParseError(format!(
+            "Expected >= 2 bytes for u16, got {}",
+            bytes.len()
+        )));
+    }
+    Ok(u16::from_le_bytes([bytes[0], bytes[1]]))
+}
+
+/// Parse a u24 little-endian BLE value (3 bytes).
+pub fn raw_to_u24(bytes: &[u8]) -> Result<u32, StorzError> {
+    if bytes.len() < 3 {
+        return Err(StorzError::ParseError(format!(
+            "Expected >= 3 bytes for u24, got {}",
+            bytes.len()
+        )));
+    }
+    Ok(bytes[0] as u32 + (bytes[1] as u32) * 256 + (bytes[2] as u32) * 65536)
+}
+
+/// Convert Celsius to Fahrenheit.
+pub fn celsius_to_fahrenheit(celsius: f32) -> f32 {
+    celsius * 1.8 + 32.0
+}
+
+/// Convert Fahrenheit to Celsius.
+pub fn fahrenheit_to_celsius(fahrenheit: f32) -> f32 {
+    (fahrenheit - 32.0) / 1.8
+}
+
+/// Round to nearest integer.
+pub fn round_f32(value: f32) -> f32 {
+    value.round()
+}
+
 /// Build a 20-byte Venty/Veazy command buffer.
 ///
 /// `cmd_id` goes in byte[0], `mask` in byte[1], and `payload` is a list of
@@ -65,6 +102,11 @@ pub fn build_venty_command(cmd_id: u8, mask: u8, payload: &[(usize, u8)]) -> [u8
         }
     }
     buf
+}
+
+/// Build a 20-byte Venty/Veazy command from a complete byte array.
+pub fn build_venty_command_from_bytes(data: &[u8; 20]) -> [u8; 20] {
+    *data
 }
 
 #[cfg(test)]
@@ -106,5 +148,29 @@ mod tests {
         assert_eq!(cmd[4], 0x1A);
         assert_eq!(cmd[5], 0x07);
         assert_eq!(cmd[2], 0); // unset bytes remain 0
+    }
+
+    #[test]
+    fn test_raw_to_u16() {
+        let bytes = [0x34, 0x12];
+        assert_eq!(raw_to_u16(&bytes).unwrap(), 0x1234);
+    }
+
+    #[test]
+    fn test_raw_to_u24() {
+        let bytes = [0x01, 0x02, 0x03];
+        assert_eq!(raw_to_u24(&bytes).unwrap(), 0x030201);
+    }
+
+    #[test]
+    fn test_celsius_to_fahrenheit() {
+        let f = celsius_to_fahrenheit(100.0);
+        assert!((f - 212.0).abs() < 0.01);
+    }
+
+    #[test]
+    fn test_fahrenheit_to_celsius() {
+        let c = fahrenheit_to_celsius(212.0);
+        assert!((c - 100.0).abs() < 0.01);
     }
 }

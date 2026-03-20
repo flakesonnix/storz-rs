@@ -29,6 +29,9 @@ impl DummyDevice {
         let state = Arc::new(Mutex::new(DeviceState {
             current_temp: Some(22.0),
             target_temp: Some(180.0),
+            boost_temp: None,
+            super_boost_temp: None,
+            heater_mode: None,
             heater_on: false,
             pump_on: false,
             fan_on: false,

@@ -10,7 +10,7 @@ use tokio::sync::{Mutex, broadcast};
 use tokio_stream::wrappers::BroadcastStream;
 use tracing::{debug, warn};
 
-use crate::device::{DeviceModel, DeviceState};
+use crate::device::{DeviceInfo, DeviceModel, DeviceSettings, DeviceState, HeaterMode};
 use crate::error::StorzError;
 use crate::protocol::VaporizerControl;
 use crate::utils;
@@ -194,9 +194,21 @@ impl Venty {
                     state.target_temp = Some((raw as f32) / 10.0);
                 }
 
+                // Byte 6: boost temperature offset
+                if data.len() >= 7 {
+                    state.boost_temp = Some(data[6] as f32);
+                }
+
+                // Byte 7: super-boost temperature offset
+                if data.len() >= 8 {
+                    state.super_boost_temp = Some(data[7] as f32);
+                }
+
                 // Byte 11: heater mode (0=off, 1=normal, 2=boost, 3=superboost)
                 if data.len() >= 12 {
-                    state.heater_on = data[11] > 0;
+                    let mode = HeaterMode::from_u8(data[11]);
+                    state.heater_on = mode != HeaterMode::Off;
+                    state.heater_mode = Some(mode);
                 }
 
                 // Parse settings from notification
@@ -226,6 +238,7 @@ impl Venty {
                     settings.charge_current_optimization = (s & 0x08) != 0;
                     settings.charge_voltage_limit = (s & 0x20) != 0;
                     settings.boost_visualization = (s & 0x40) != 0;
+                    settings.vibration = (s & 0x40) != 0;
                     state.setpoint_reached = settings.setpoint_reached;
                 }
 
@@ -333,6 +346,182 @@ impl VaporizerControl for Venty {
         Ok(Box::pin(
             BroadcastStream::new(rx).filter_map(|r| async move { r.ok() }),
         ))
+    }
+
+    async fn get_settings(&self) -> Result<DeviceSettings, StorzError> {
+        let state = self.state.lock().await;
+        state.settings.clone().ok_or(StorzError::ParseError(
+            "Settings not yet available from device notifications".into(),
+        ))
+    }
+
+    async fn set_temperature_unit(&self, celsius: bool) -> Result<(), StorzError> {
+        let buf = utils::build_venty_command(
+            0x01,
+            0x80, // SETTINGS mask
+            &[
+                (14, if celsius { 0 } else { 1 }),
+                (15, 0x01), // BIT_SETTINGS_UNIT
+            ],
+        );
+        self.write_command(&buf).await?;
+        debug!("Venty/Veazy temperature unit set to {}", if celsius { "Celsius" } else { "Fahrenheit" });
+        Ok(())
+    }
+
+    async fn set_boost_temperature(&self, celsius: f32) -> Result<(), StorzError> {
+        let raw = celsius.round() as u8;
+        let buf = utils::build_venty_command(
+            0x01,
+            0x04,    // SET_BOOST mask
+            &[(6, raw)],
+        );
+        self.write_command(&buf).await?;
+        debug!("Venty/Veazy boost temp set to {celsius}°C");
+        Ok(())
+    }
+
+    async fn set_super_boost_temperature(&self, celsius: f32) -> Result<(), StorzError> {
+        let raw = celsius.round() as u8;
+        let buf = utils::build_venty_command(
+            0x01,
+            0x08,    // SET_SUPERBOOST mask
+            &[(7, raw)],
+        );
+        self.write_command(&buf).await?;
+        debug!("Venty/Veazy super-boost temp set to {celsius}°C");
+        Ok(())
+    }
+
+    async fn set_auto_shutdown_timer(&self, seconds: u16) -> Result<(), StorzError> {
+        let low = (seconds & 0xFF) as u8;
+        let high = ((seconds >> 8) & 0xFF) as u8;
+        let buf = utils::build_venty_command(
+            0x01,
+            0x10, // Auto-shutdown mask (bit 4)
+            &[(9, low), (10, high)],
+        );
+        self.write_command(&buf).await?;
+        debug!("Venty/Veazy auto-shutdown timer set to {seconds}s");
+        Ok(())
+    }
+
+    async fn set_heater_mode(&self, mode: crate::device::HeaterMode) -> Result<(), StorzError> {
+        let buf = utils::build_venty_command(
+            0x01,
+            0x20,                // HEATER mask
+            &[(11, mode as u8)], // heater mode
+        );
+        self.write_command(&buf).await?;
+        debug!("Venty/Veazy heater mode set to {mode}");
+        Ok(())
+    }
+
+    async fn factory_reset(&self) -> Result<(), StorzError> {
+        let buf = utils::build_venty_command(
+            0x01,
+            0x80, // SETTINGS mask
+            &[
+                (14, 0x04), // BIT_SETTINGS_FACTORY_RESET
+                (15, 0x04), // Mask for bit 2
+            ],
+        );
+        self.write_command(&buf).await?;
+        debug!("Venty/Veazy factory reset triggered");
+        Ok(())
+    }
+
+    async fn set_boost_visualization(&self, enabled: bool) -> Result<(), StorzError> {
+        let should_set = if self.model == DeviceModel::Veazy {
+            !enabled // Veazy inverts the logic
+        } else {
+            enabled
+        };
+        let buf = utils::build_venty_command(
+            0x01,
+            0x80, // SETTINGS mask
+            &[
+                (14, if should_set { 0x40 } else { 0x00 }),
+                (15, 0x40), // Mask for bit 6
+            ],
+        );
+        self.write_command(&buf).await?;
+        debug!("Venty/Veazy boost visualization set to {enabled}");
+        Ok(())
+    }
+
+    async fn set_charge_current_optimization(&self, enabled: bool) -> Result<(), StorzError> {
+        let buf = utils::build_venty_command(
+            0x01,
+            0x80, // SETTINGS mask
+            &[
+                (14, if enabled { 0x08 } else { 0x00 }),
+                (15, 0x08), // Mask for bit 3
+            ],
+        );
+        self.write_command(&buf).await?;
+        debug!("Venty/Veazy charge current optimization set to {enabled}");
+        Ok(())
+    }
+
+    async fn set_charge_voltage_limit(&self, enabled: bool) -> Result<(), StorzError> {
+        let buf = utils::build_venty_command(
+            0x01,
+            0x80, // SETTINGS mask
+            &[
+                (14, if enabled { 0x20 } else { 0x00 }),
+                (15, 0x20), // Mask for bit 5
+            ],
+        );
+        self.write_command(&buf).await?;
+        debug!("Venty/Veazy charge voltage limit set to {enabled}");
+        Ok(())
+    }
+
+    async fn set_permanent_bluetooth(&self, enabled: bool) -> Result<(), StorzError> {
+        let buf = utils::build_venty_command(
+            0x01,
+            0x80, // SETTINGS mask
+            &[
+                (16, if enabled { 0x01 } else { 0x00 }),
+                (17, 0x01), // BIT_SETTINGS2_BLE_PERMANENT
+            ],
+        );
+        self.write_command(&buf).await?;
+        debug!("Venty/Veazy permanent bluetooth set to {enabled}");
+        Ok(())
+    }
+
+    async fn set_vibration(&self, on: bool) -> Result<(), StorzError> {
+        // CMD 0x06 with mask bit 3 (1 << 3 = 8)
+        let mut buf = [0u8; 7];
+        buf[0] = 0x06;
+        buf[1] = 1 << 3; // Vibration mask
+        buf[5] = on as u8;
+        self.write_command(&buf).await?;
+        debug!("Venty/Veazy vibration set to {on}");
+        Ok(())
+    }
+
+    async fn set_brightness(&self, value: u16) -> Result<(), StorzError> {
+        // CMD 0x06 with mask bit 0 (1 << 0 = 1)
+        let mut buf = [0u8; 7];
+        buf[0] = 0x06;
+        buf[1] = 1 << 0; // Brightness mask
+        buf[2] = (value & 0xFF) as u8;
+        self.write_command(&buf).await?;
+        debug!("Venty/Veazy brightness set to {value}");
+        Ok(())
+    }
+
+    async fn get_device_info(&self) -> Result<DeviceInfo, StorzError> {
+        // CMD 0x05 requests device data; result comes via notification.
+        // We can only return cached data from the last notification.
+        let buf = utils::build_venty_command(0x05, 0, &[]);
+        self.write_command(&buf).await?;
+        debug!("Venty/Veazy device info request sent");
+        // Return default; real data arrives asynchronously via notifications.
+        Ok(DeviceInfo::default())
     }
 
     fn device_model(&self) -> DeviceModel {
