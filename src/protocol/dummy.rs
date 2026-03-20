@@ -325,7 +325,10 @@ mod tests {
 
         let current = device.get_current_temperature().await.unwrap();
         let initial = 22.0;
-        assert!(current > initial, "Temperature should increase when heating");
+        assert!(
+            current > initial,
+            "Temperature should increase when heating"
+        );
     }
 
     #[tokio::test]
@@ -437,12 +440,11 @@ mod tests {
         let device = DummyDevice::new();
 
         // Use low target temp so DummyDevice reaches it quickly
-        let workflow = Workflow::new("Quick Test")
-            .add_step(WorkflowStep {
-                temperature: 25.0,
-                hold_time_seconds: 0,
-                pump_time_seconds: 0,
-            });
+        let workflow = Workflow::new("Quick Test").add_step(WorkflowStep {
+            temperature: 25.0,
+            hold_time_seconds: 0,
+            pump_time_seconds: 0,
+        });
 
         let runner = WorkflowRunner::new();
         let result = runner.run(&device, &workflow).await;
@@ -461,20 +463,17 @@ mod tests {
         let device = DummyDevice::new();
 
         // High temp so it takes a while
-        let workflow = Workflow::new("Long Running")
-            .add_step(WorkflowStep {
-                temperature: 230.0,
-                hold_time_seconds: 0,
-                pump_time_seconds: 0,
-            });
+        let workflow = Workflow::new("Long Running").add_step(WorkflowStep {
+            temperature: 230.0,
+            hold_time_seconds: 0,
+            pump_time_seconds: 0,
+        });
 
         let runner = WorkflowRunner::new();
         let runner_clone = WorkflowRunner::new();
 
         // Start workflow in background
-        let handle = tokio::spawn(async move {
-            runner.run(&device, &workflow).await
-        });
+        let handle = tokio::spawn(async move { runner.run(&device, &workflow).await });
 
         // Give it a moment to start
         tokio::time::sleep(Duration::from_millis(100)).await;

@@ -154,10 +154,7 @@ pub trait VaporizerControl: Send + Sync {
     }
 
     /// Set heater mode (Venty/Veazy: 0=off, 1=normal, 2=boost, 3=superboost).
-    async fn set_heater_mode(
-        &self,
-        _mode: crate::device::HeaterMode,
-    ) -> Result<(), StorzError> {
+    async fn set_heater_mode(&self, _mode: crate::device::HeaterMode) -> Result<(), StorzError> {
         Err(StorzError::UnsupportedOperation {
             device: "unknown".into(),
             operation: "set_heater_mode".into(),

@@ -109,15 +109,17 @@ impl WorkflowRunner {
         {
             let mut state = self.state.lock().await;
             if *state == WorkflowState::Running {
-                return Err(StorzError::ParseError(
-                    "Workflow already running".into(),
-                ));
+                return Err(StorzError::ParseError("Workflow already running".into()));
             }
             *state = WorkflowState::Running;
         }
 
         *self.current_step.lock().await = 0;
-        info!("Starting workflow '{}' with {} steps", workflow.name, workflow.steps.len());
+        info!(
+            "Starting workflow '{}' with {} steps",
+            workflow.name,
+            workflow.steps.len()
+        );
 
         for (i, step) in workflow.steps.iter().enumerate() {
             // Check if we should stop
@@ -171,7 +173,8 @@ impl WorkflowRunner {
         tokio::time::sleep(Duration::from_millis(750)).await;
 
         // 3. Wait for temperature to be reached (±1°C tolerance)
-        self.wait_for_temperature(device, step.temperature, 1.0).await?;
+        self.wait_for_temperature(device, step.temperature, 1.0)
+            .await?;
 
         // 4. Hold at temperature
         if step.hold_time_seconds > 0 {
@@ -304,17 +307,61 @@ mod tests {
     #[test]
     fn test_default_workflows() {
         let balloon = Workflow::new("Balloon")
-            .add_step(WorkflowStep { temperature: 170.0, hold_time_seconds: 0, pump_time_seconds: 5 })
-            .add_step(WorkflowStep { temperature: 175.0, hold_time_seconds: 0, pump_time_seconds: 5 })
-            .add_step(WorkflowStep { temperature: 180.0, hold_time_seconds: 0, pump_time_seconds: 5 })
-            .add_step(WorkflowStep { temperature: 185.0, hold_time_seconds: 0, pump_time_seconds: 5 })
-            .add_step(WorkflowStep { temperature: 190.0, hold_time_seconds: 0, pump_time_seconds: 5 })
-            .add_step(WorkflowStep { temperature: 195.0, hold_time_seconds: 0, pump_time_seconds: 5 })
-            .add_step(WorkflowStep { temperature: 200.0, hold_time_seconds: 0, pump_time_seconds: 5 })
-            .add_step(WorkflowStep { temperature: 205.0, hold_time_seconds: 0, pump_time_seconds: 5 })
-            .add_step(WorkflowStep { temperature: 210.0, hold_time_seconds: 0, pump_time_seconds: 5 })
-            .add_step(WorkflowStep { temperature: 215.0, hold_time_seconds: 0, pump_time_seconds: 5 })
-            .add_step(WorkflowStep { temperature: 220.0, hold_time_seconds: 0, pump_time_seconds: 5 });
+            .add_step(WorkflowStep {
+                temperature: 170.0,
+                hold_time_seconds: 0,
+                pump_time_seconds: 5,
+            })
+            .add_step(WorkflowStep {
+                temperature: 175.0,
+                hold_time_seconds: 0,
+                pump_time_seconds: 5,
+            })
+            .add_step(WorkflowStep {
+                temperature: 180.0,
+                hold_time_seconds: 0,
+                pump_time_seconds: 5,
+            })
+            .add_step(WorkflowStep {
+                temperature: 185.0,
+                hold_time_seconds: 0,
+                pump_time_seconds: 5,
+            })
+            .add_step(WorkflowStep {
+                temperature: 190.0,
+                hold_time_seconds: 0,
+                pump_time_seconds: 5,
+            })
+            .add_step(WorkflowStep {
+                temperature: 195.0,
+                hold_time_seconds: 0,
+                pump_time_seconds: 5,
+            })
+            .add_step(WorkflowStep {
+                temperature: 200.0,
+                hold_time_seconds: 0,
+                pump_time_seconds: 5,
+            })
+            .add_step(WorkflowStep {
+                temperature: 205.0,
+                hold_time_seconds: 0,
+                pump_time_seconds: 5,
+            })
+            .add_step(WorkflowStep {
+                temperature: 210.0,
+                hold_time_seconds: 0,
+                pump_time_seconds: 5,
+            })
+            .add_step(WorkflowStep {
+                temperature: 215.0,
+                hold_time_seconds: 0,
+                pump_time_seconds: 5,
+            })
+            .add_step(WorkflowStep {
+                temperature: 220.0,
+                hold_time_seconds: 0,
+                pump_time_seconds: 5,
+            });
 
         assert_eq!(balloon.steps.len(), 11);
         assert_eq!(balloon.steps[0].temperature, 170.0);

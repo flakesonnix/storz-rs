@@ -93,7 +93,13 @@ impl Venty {
 
             while let Some(data) = stream.next().await {
                 Self::debug_dump_notification(&data.value);
-                Self::handle_notification_inner(&state, &device_info, &state_tx, model, &data.value);
+                Self::handle_notification_inner(
+                    &state,
+                    &device_info,
+                    &state_tx,
+                    model,
+                    &data.value,
+                );
             }
 
             warn!("{model} notification stream ended (disconnect?)");
@@ -265,14 +271,8 @@ impl Venty {
                     Ok(i) => i,
                     Err(_) => return,
                 };
-                let firmware = format!(
-                    "{}.{}.{}.{}",
-                    data[1], data[2], data[3], data[4]
-                );
-                let bootloader = format!(
-                    "{}.{}.{}.{}",
-                    data[5], data[6], data[7], data[8]
-                );
+                let firmware = format!("{}.{}.{}.{}", data[1], data[2], data[3], data[4]);
+                let bootloader = format!("{}.{}.{}.{}", data[5], data[6], data[7], data[8]);
                 info.firmware_version = Some(firmware);
                 info.firmware_ble_version = Some(bootloader);
                 debug!(
