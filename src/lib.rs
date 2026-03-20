@@ -3,6 +3,49 @@
 //! Rust library for controlling Storz & Bickel vaporizers via Bluetooth Low Energy.
 //!
 //! Supports **Volcano Hybrid**, **Venty**, **Veazy**, and **Crafty+**.
+//!
+//! ## Quick Start
+//!
+//! ```no_run
+//! use std::time::Duration;
+//! use storz_rs::{discover_vaporizers, get_adapter, connect, VaporizerControl};
+//!
+//! # async fn example() -> Result<(), Box<dyn std::error::Error>> {
+//! // 1. Get a Bluetooth adapter
+//! let adapter = get_adapter().await?;
+//!
+//! // 2. Scan for vaporizers
+//! let peripherals = discover_vaporizers(&adapter, Duration::from_secs(10)).await?;
+//! let peripheral = peripherals.into_iter().next().expect("No devices found");
+//!
+//! // 3. Connect and get a controller
+//! let device = connect(peripheral).await?;
+//!
+//! // 4. Read temperature
+//! let temp = device.get_current_temperature().await?;
+//! println!("Current temperature: {temp}°C");
+//!
+//! // 5. Set target temperature
+//! device.set_target_temperature(185.0).await?;
+//! # Ok(())
+//! # }
+//! ```
+//!
+//! ## Supported Features
+//!
+//! | Feature | Volcano | Venty/Veazy | Crafty |
+//! |---|---|---|---|
+//! | Temperature control | ✓ | ✓ | ✓ |
+//! | Heater on/off | ✓ | ✓ | ✓ |
+//! | Pump on/off | ✓ | — | — |
+//! | Brightness | ✓ | ✓ | ✓ |
+//! | Vibration | ✓ | ✓ | — |
+//! | Boost temperature | — | ✓ | ✓ |
+//! | Auto-shutdown timer | ✓ | ✓ | ✓ |
+//! | Factory reset | — | ✓ | ✓ |
+//! | Device info (serial, firmware) | ✓ | ✓ | ✓ |
+//! | Workflow automation | ✓ | — | — |
+//!
 
 pub mod device;
 pub mod discovery;

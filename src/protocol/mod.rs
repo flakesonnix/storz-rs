@@ -1,3 +1,13 @@
+//! Protocol implementations for Storz & Bickel devices.
+//!
+//! Each device type has its own struct implementing the [`VaporizerControl`] trait:
+//!
+//! - [`VolcanoHybrid`] - Desktop vaporizer with heater, pump, and fan
+//! - [`Venty`] - Portable vaporizer (also used for Veazy)
+//! - [`Crafty`] - Compact portable vaporizer
+//!
+//! All device structs are created via [`crate::connect()`] which auto-detects the model.
+
 mod crafty;
 #[cfg(test)]
 mod dummy;
