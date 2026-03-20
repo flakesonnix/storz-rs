@@ -195,7 +195,31 @@
 <a href=#195 id=195 data-nosnippet>195</a>        })
 <a href=#196 id=196 data-nosnippet>196</a>    }
 <a href=#197 id=197 data-nosnippet>197</a>
-<a href=#198 id=198 data-nosnippet>198</a>    <span class="doccomment">/// Return the device model.
-<a href=#199 id=199 data-nosnippet>199</a>    </span><span class="kw">fn </span>device_model(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; DeviceModel;
-<a href=#200 id=200 data-nosnippet>200</a>}
+<a href=#198 id=198 data-nosnippet>198</a>    <span class="doccomment">/// Set the auto-off countdown in seconds (Crafty).
+<a href=#199 id=199 data-nosnippet>199</a>    </span><span class="kw">async fn </span>set_auto_off_countdown(<span class="kw-2">&amp;</span><span class="self">self</span>, _seconds: u16) -&gt; <span class="prelude-ty">Result</span>&lt;(), StorzError&gt; {
+<a href=#200 id=200 data-nosnippet>200</a>        <span class="prelude-val">Err</span>(StorzError::UnsupportedOperation {
+<a href=#201 id=201 data-nosnippet>201</a>            device: <span class="string">"unknown"</span>.into(),
+<a href=#202 id=202 data-nosnippet>202</a>            operation: <span class="string">"set_auto_off_countdown"</span>.into(),
+<a href=#203 id=203 data-nosnippet>203</a>        })
+<a href=#204 id=204 data-nosnippet>204</a>    }
+<a href=#205 id=205 data-nosnippet>205</a>
+<a href=#206 id=206 data-nosnippet>206</a>    <span class="doccomment">/// Read the project register value (Crafty).
+<a href=#207 id=207 data-nosnippet>207</a>    </span><span class="kw">async fn </span>get_project_register(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;u16, StorzError&gt; {
+<a href=#208 id=208 data-nosnippet>208</a>        <span class="prelude-val">Err</span>(StorzError::UnsupportedOperation {
+<a href=#209 id=209 data-nosnippet>209</a>            device: <span class="string">"unknown"</span>.into(),
+<a href=#210 id=210 data-nosnippet>210</a>            operation: <span class="string">"get_project_register"</span>.into(),
+<a href=#211 id=211 data-nosnippet>211</a>        })
+<a href=#212 id=212 data-nosnippet>212</a>    }
+<a href=#213 id=213 data-nosnippet>213</a>
+<a href=#214 id=214 data-nosnippet>214</a>    <span class="doccomment">/// Write the security code (Crafty+).
+<a href=#215 id=215 data-nosnippet>215</a>    </span><span class="kw">async fn </span>set_security_code(<span class="kw-2">&amp;</span><span class="self">self</span>, _code: u16) -&gt; <span class="prelude-ty">Result</span>&lt;(), StorzError&gt; {
+<a href=#216 id=216 data-nosnippet>216</a>        <span class="prelude-val">Err</span>(StorzError::UnsupportedOperation {
+<a href=#217 id=217 data-nosnippet>217</a>            device: <span class="string">"unknown"</span>.into(),
+<a href=#218 id=218 data-nosnippet>218</a>            operation: <span class="string">"set_security_code"</span>.into(),
+<a href=#219 id=219 data-nosnippet>219</a>        })
+<a href=#220 id=220 data-nosnippet>220</a>    }
+<a href=#221 id=221 data-nosnippet>221</a>
+<a href=#222 id=222 data-nosnippet>222</a>    <span class="doccomment">/// Return the device model.
+<a href=#223 id=223 data-nosnippet>223</a>    </span><span class="kw">fn </span>device_model(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; DeviceModel;
+<a href=#224 id=224 data-nosnippet>224</a>}
 </code></pre></div></section></main></body></html>

@@ -1,2 +1,2 @@
-createSrcSidebar('[["storz_rs",["",[["protocol",[],["crafty.rs","mod.rs","venty.rs","volcano.rs"]]],["device.rs","discovery.rs","error.rs","lib.rs","utils.rs","uuids.rs"]]]]');
-//{"start":19,"fragment_lengths":[153]}
+createSrcSidebar('[["storz_rs",["",[["protocol",[],["crafty.rs","mod.rs","venty.rs","volcano.rs"]]],["device.rs","discovery.rs","error.rs","lib.rs","utils.rs","uuids.rs","workflow.rs"]]]]');
+//{"start":19,"fragment_lengths":[167]}
