@@ -221,6 +221,15 @@ impl VaporizerControl for Crafty {
         })
     }
 
+    async fn factory_reset(&self) -> Result<(), StorzError> {
+        let ch = self.characteristic(CRAFTY_FACTORY_RESET).await?;
+        self.peripheral
+            .write(&ch, &[0x00], WriteType::WithoutResponse)
+            .await?;
+        debug!("Crafty factory reset triggered");
+        Ok(())
+    }
+
     fn device_model(&self) -> DeviceModel {
         DeviceModel::Crafty
     }

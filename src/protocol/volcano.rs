@@ -263,6 +263,20 @@ impl VaporizerControl for VolcanoHybrid {
         Ok(())
     }
 
+    async fn set_display_on_cooling(&self, on: bool) -> Result<(), StorzError> {
+        let ch = self.characteristic(VOLCANO_DISPLAY).await?;
+        let raw: u32 = if on {
+            volcano_flags::DISPLAY_ON_COOLING as u32
+        } else {
+            0x10000 + volcano_flags::DISPLAY_ON_COOLING as u32
+        };
+        self.peripheral
+            .write(&ch, &raw.to_le_bytes(), WriteType::WithoutResponse)
+            .await?;
+        debug!("Volcano display-on-cooling set to {on}");
+        Ok(())
+    }
+
     fn device_model(&self) -> DeviceModel {
         DeviceModel::VolcanoHybrid
     }

@@ -179,6 +179,22 @@ pub trait VaporizerControl: Send + Sync {
         })
     }
 
+    /// Set display-on-cooling mode (Volcano Hybrid).
+    async fn set_display_on_cooling(&self, _on: bool) -> Result<(), StorzError> {
+        Err(StorzError::UnsupportedOperation {
+            device: "unknown".into(),
+            operation: "set_display_on_cooling".into(),
+        })
+    }
+
+    /// Set boost/superboost timeout in seconds (Venty/Veazy).
+    async fn set_boost_timeout(&self, _seconds: u8) -> Result<(), StorzError> {
+        Err(StorzError::UnsupportedOperation {
+            device: "unknown".into(),
+            operation: "set_boost_timeout".into(),
+        })
+    }
+
     /// Return the device model.
     fn device_model(&self) -> DeviceModel;
 }

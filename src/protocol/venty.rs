@@ -588,6 +588,17 @@ impl VaporizerControl for Venty {
         Ok(())
     }
 
+    async fn set_boost_timeout(&self, seconds: u8) -> Result<(), StorzError> {
+        // CMD 0x06 with mask bit 4 (1 << 4 = 16)
+        let mut buf = [0u8; 7];
+        buf[0] = 0x06;
+        buf[1] = 1 << 4; // BoostTimeout mask
+        buf[6] = seconds;
+        self.write_command(&buf).await?;
+        debug!("Venty/Veazy boost timeout set to {seconds}s");
+        Ok(())
+    }
+
     async fn get_device_info(&self) -> Result<DeviceInfo, StorzError> {
         // Request firmware data via CMD 0x02
         let buf = utils::build_venty_command(0x02, 0, &[]);
