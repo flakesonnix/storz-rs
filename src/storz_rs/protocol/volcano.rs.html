@@ -253,8 +253,18 @@
 <a href=#253 id=253 data-nosnippet>253</a>        })
 <a href=#254 id=254 data-nosnippet>254</a>    }
 <a href=#255 id=255 data-nosnippet>255</a>
-<a href=#256 id=256 data-nosnippet>256</a>    <span class="kw">fn </span>device_model(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; DeviceModel {
-<a href=#257 id=257 data-nosnippet>257</a>        DeviceModel::VolcanoHybrid
-<a href=#258 id=258 data-nosnippet>258</a>    }
-<a href=#259 id=259 data-nosnippet>259</a>}
+<a href=#256 id=256 data-nosnippet>256</a>    <span class="kw">async fn </span>set_shutoff_time(<span class="kw-2">&amp;</span><span class="self">self</span>, seconds: u16) -&gt; <span class="prelude-ty">Result</span>&lt;(), StorzError&gt; {
+<a href=#257 id=257 data-nosnippet>257</a>        <span class="kw">let </span>ch = <span class="self">self</span>.characteristic(VOLCANO_SHUTOFF_TIME).<span class="kw">await</span><span class="question-mark">?</span>;
+<a href=#258 id=258 data-nosnippet>258</a>        <span class="kw">let </span>raw = seconds.to_le_bytes();
+<a href=#259 id=259 data-nosnippet>259</a>        <span class="self">self</span>.peripheral
+<a href=#260 id=260 data-nosnippet>260</a>            .write(<span class="kw-2">&amp;</span>ch, <span class="kw-2">&amp;</span>raw, WriteType::WithoutResponse)
+<a href=#261 id=261 data-nosnippet>261</a>            .<span class="kw">await</span><span class="question-mark">?</span>;
+<a href=#262 id=262 data-nosnippet>262</a>        <span class="macro">debug!</span>(<span class="string">"Volcano shutoff time set to {seconds}s"</span>);
+<a href=#263 id=263 data-nosnippet>263</a>        <span class="prelude-val">Ok</span>(())
+<a href=#264 id=264 data-nosnippet>264</a>    }
+<a href=#265 id=265 data-nosnippet>265</a>
+<a href=#266 id=266 data-nosnippet>266</a>    <span class="kw">fn </span>device_model(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; DeviceModel {
+<a href=#267 id=267 data-nosnippet>267</a>        DeviceModel::VolcanoHybrid
+<a href=#268 id=268 data-nosnippet>268</a>    }
+<a href=#269 id=269 data-nosnippet>269</a>}
 </code></pre></div></section></main></body></html>
